@@ -15,7 +15,8 @@ Evermore) to keep its other changes:
 What --out changes (every other file in the MPQ is copied unchanged):
 
 - Spell.dbc: clears Totem (fields 50, 51) and TotemCategory (222, 223) on every trade skill spell
-  (Attributes & 0x20, SPELL_ATTR0_IS_TRADESKILL) that has any of them set. The server records
+  (Attributes & 0x20, SPELL_ATTR0_IS_TRADESKILL) that has any of them set, and on the spells that
+  need a Mining Pick or Skinning Knife, which aren't marked as trade skills. The server records
   and clears the same fields on the same spells at startup and checks the tools itself, so tools
   in profession equipment slots count. Then appends the recipe spells (copies of a stock recipe
   of the crafter, see RECIPE_TEMPLATES in gear_data.py).
@@ -88,6 +89,7 @@ F_DESCRIPTION = 170       # 16 + flags (186)
 F_TOOLTIP = 187           # 16 + flags (203)
 F_TOTEM_CATEGORY = (222, 223)
 TOOL_FIELDS = F_TOTEM + F_TOTEM_CATEGORY
+GATHER_TOOL_CATEGORIES = (165, 166)  # Mining Pick, Skinning Knife
 F_TARGETS = 16
 F_EQUIPPED_ITEM = (68, 69, 70)  # EquippedItemClass, SubClassMask, InventoryTypeMask
 F_IMPLICIT_TARGET_A = 86        # 3
@@ -208,14 +210,16 @@ def is_loot_crafting(row):
 
 def clear_tools(spell, abilities):
     """Clears Totem/TotemCategory on every trade skill spell that has any, except loot crafting
-    (see is_loot_crafting); the same spells the server clears (Gear::Build).
+    (see is_loot_crafting), and on Mining and Skinning; the same spells the server clears
+    (Gear::Build).
     Returns (spells cleared, {skill line or 0 for none: count})."""
     skills = collections.defaultdict(set)
     for a in abilities.rows:
         skills[a[2]].add(a[1])
     total, counts = 0, collections.Counter()
     for row in spell.rows:
-        if row[F_ATTRIBUTES] & SPELL_ATTR0_IS_TRADESKILL and any(row[f] for f in TOOL_FIELDS) and not is_loot_crafting(row):
+        gather = row[F_TOTEM_CATEGORY[0]] in GATHER_TOOL_CATEGORIES
+        if (gather or row[F_ATTRIBUTES] & SPELL_ATTR0_IS_TRADESKILL) and any(row[f] for f in TOOL_FIELDS) and not is_loot_crafting(row):
             for f in TOOL_FIELDS:
                 row[f] = 0
             total += 1

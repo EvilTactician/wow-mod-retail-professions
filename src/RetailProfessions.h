@@ -107,10 +107,7 @@ namespace RetailProfessions
         bool gear = true;               // profession equipment slots
         bool gearAccountWide = true;    // the slots belong to the account
         uint32 gearPersonalChallenges = 15; // mod-challenges bits whose characters keep slots of their own
-        // mod-gathering-tools' GatheringTools.ToolSkillBonus and .ToolGatherSpeed: what carrying a
-        // pick or knife gives, which one in a slot gives too (when that module is installed).
-        int32 gatherToolSkill = 0;
-        uint32 gatherToolSpeed = 25;
+        bool bossSkinningDiscard = true; // bosses stay skinnable in bot groups (RetailProfessionsBossSkinning.cpp)
     };
 
     // Crafting speed never goes past this, gear included.

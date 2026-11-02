@@ -32,14 +32,14 @@
  * The client checks a recipe's tools itself and never sends the cast without them, so the
  * client patch clears them from Spell.dbc, and the server clears them from SpellInfo at
  * startup and checks them itself (bags, worn, or slots) before each cast. Both clear the same
- * spells: every trade skill spell with a tool. A player without the patch still has the
- * client's own check, which only looks in the bags: nothing breaks, the slots just don't count.
+ * spells: every trade skill spell with a tool, and Mining and Skinning, which aren't marked as
+ * trade skills. A player without the patch still has the client's own check, which only looks in
+ * the bags: nothing breaks, the slots just don't count.
  *
  * Gathering tools and fishing rods (HELLO_GEAR_GATHER):
- *   - a Mining Pick or Skinning Knife (anything with a compatible tool category) goes in a slot of
- *     its profession as a plain tool. mod-gathering-tools makes the tool optional and gives
- *     whoever carries one faster gathering (and skill, if set); one in a slot gives the same, so
- *     it needn't take bag space;
+ *   - Mining and Skinning need their tool, as they do in stock. A Mining Pick or Skinning Knife
+ *     (anything with a compatible tool category) counts from the bags, or from a slot of its
+ *     profession as a plain tool, where it takes no bag space;
  *   - Fishing has a rod slot and a lure slot. Fishing works with the rod there instead of
  *     in the main hand, and lures and fishing lines go on it: the client patch takes the rod
  *     requirement (and the lure's item target) out of Spell.dbc, the server takes the rod
@@ -134,18 +134,16 @@ namespace RetailProfessions::Gear
         constexpr uint32 CHECK_INTERVAL = 5000;
         constexpr char const* DATA_KEY = "RetailProfessionsGear";
 
-        // The tools mod-gathering-tools rewards carrying, and its aura for carrying one (90130,
-        // 90131: when it's up, a tool in the bags already gives what a slotted one would).
+        // The tools gathering needs. No other spell asks for these two categories.
         struct GatherTool
         {
             uint32 skill;
             uint32 category; // TotemCategory
-            uint32 aura;
         };
 
         constexpr std::array<GatherTool, 2> GATHER_TOOLS = {{
-            { SKILL_MINING,   165, 90130 }, // Mining Pick
-            { SKILL_SKINNING, 166, 90131 }, // Skinning Knife
+            { SKILL_MINING,   165 }, // Mining Pick
+            { SKILL_SKINNING, 166 }, // Skinning Knife
         }};
 
         constexpr uint32 FISHING_POLE_MASK = 1 << ITEM_SUBCLASS_WEAPON_FISHING_POLE;
@@ -218,6 +216,14 @@ namespace RetailProfessions::Gear
         {
             for (GatherTool const& tool : GATHER_TOOLS)
                 if (tool.skill == skill)
+                    return &tool;
+            return nullptr;
+        }
+
+        GatherTool const* GatherToolOfCategory(uint32 category)
+        {
+            for (GatherTool const& tool : GATHER_TOOLS)
+                if (tool.category == category)
                     return &tool;
             return nullptr;
         }
@@ -370,16 +376,7 @@ namespace RetailProfessions::Gear
             ChatHandler(player->GetSession()).SendSysMessage("|cffffd200Profession equipment:|r " + text);
         }
 
-        // ---- gathering tools and the rod --------------------------------------------------------
-
-        // A slotted pick or knife counts while mod-gathering-tools is installed (its aura spell
-        // exists) and the player doesn't carry one already (its aura is up then).
-        bool SlottedGatherTool(Player* player, GatherTool const& tool)
-        {
-            if (!sSpellMgr->GetSpellInfo(tool.aura) || player->HasAura(tool.aura) || !player->HasSkill(tool.skill))
-                return false;
-            return AnySlotted(player, tool.skill, [player, &tool](Item const* item) { return MeetsCategory(player, item, tool.category); });
-        }
+        // ---- the rod ------------------------------------------------------------------------------
 
         Item* MainHandPole(Player* player)
         {
@@ -504,9 +501,6 @@ namespace RetailProfessions::Gear
                     if (Item const* pole = SlottedPole(player))
                         bonus += PoleSkill(pole);
                 }
-                else if (GatherTool const* tool = GatherToolOf(layout.skill))
-                    if (SlottedGatherTool(player, *tool))
-                        bonus += GetConfig().gatherToolSkill;
             }
 
             Aura* aura = player->GetAura(layout.aura);
@@ -926,12 +920,16 @@ namespace RetailProfessions::Gear
                 sGear.emplace(entry, row);
             } while (result->NextRow());
 
-        // Every trade skill spell's tools, then cleared: the module checks them itself.
+        // Every trade skill spell's tools, and Mining's and Skinning's, then cleared: the module
+        // checks them itself.
         bool clear = GetConfig().gear;
         for (uint32 id = 0; id < sSpellMgr->GetSpellInfoStoreSize(); ++id)
         {
             SpellInfo* info = const_cast<SpellInfo*>(sSpellMgr->GetSpellInfo(id));
-            if (!info || !info->HasAttribute(SPELL_ATTR0_IS_TRADESKILL))
+            if (!info)
+                continue;
+            GatherTool const* gatherTool = GatherToolOfCategory(info->TotemCategory[0]);
+            if (!info->HasAttribute(SPELL_ATTR0_IS_TRADESKILL) && !gatherTool)
                 continue;
             if (!info->Totem[0] && !info->Totem[1] && !info->TotemCategory[0] && !info->TotemCategory[1])
                 continue;
@@ -949,6 +947,9 @@ namespace RetailProfessions::Gear
             for (auto itr = bounds.first; itr != bounds.second && !need.skill; ++itr)
                 if (LayoutOf(itr->second->SkillLine))
                     need.skill = itr->second->SkillLine;
+            // Mining a creature's corpse has no skill line of its own.
+            if (gatherTool)
+                need.skill = gatherTool->skill;
             sNeeds.emplace(id, need);
 
             if (clear)
@@ -1629,8 +1630,9 @@ namespace RetailProfessions::Gear
         bool categoriesMissing = false;
         if (!totemsMissing)
             for (uint32 category : need.category)
+                // A pick or knife counts from any profession's slot: a multitool can be both.
                 if (category && !player->HasItemTotemCategory(category)
-                    && !AnySlotted(player, need.skill, [player, category](Item const* item) { return MeetsCategory(player, item, category); }))
+                    && !AnySlotted(player, GatherToolOfCategory(category) ? 0 : need.skill, [player, category](Item const* item) { return MeetsCategory(player, item, category); }))
                     categoriesMissing = true;
 
         if (!totemsMissing && !categoriesMissing)
@@ -1768,19 +1770,13 @@ namespace RetailProfessions::Gear
         if (!skill)
             return;
         float deftness = std::min(Bonus(caster->ToPlayer(), skill, STAT_DEFTNESS), 90.0f);
-        // mod-gathering-tools' speed for a pick or knife in a slot, as it gives one in the bags.
-        float toolSpeed = 0.0f;
-        if (GatherTool const* tool = GatherToolOf(skill))
-            if (SlottedGatherTool(caster->ToPlayer(), *tool))
-                toolSpeed = float(GetConfig().gatherToolSpeed);
         int32 full = spell->GetCastTime();
-        if ((deftness <= 0.0f && toolSpeed <= 0.0f) || full <= 0)
+        if (deftness <= 0.0f || full <= 0)
             return;
 
         // As the Perks code does it: m_casttime is protected, a derived class may name it.
         struct Access : Spell { using Spell::m_casttime; };
-        float factor = (100.0f - deftness) / 100.0f * (100.0f - toolSpeed) / 100.0f;
-        spell->*(&Access::m_casttime) = std::max<int32>(int32(float(full) * factor), 1);
+        spell->*(&Access::m_casttime) = std::max<int32>(int32(float(full) * (100.0f - deftness) / 100.0f), 1);
         spell->ReSetTimer();
         spell->SendSpellStart();
     }

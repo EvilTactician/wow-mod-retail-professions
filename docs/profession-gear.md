@@ -120,10 +120,8 @@ leaves its rows behind (the core has no account-delete hook); nothing reads them
 - Perception: other (rare) items of a gathered node's or skinned corpse's loot roll at
   chance × (100 + perception)%.
 - Deftness: gathering casts (herb/mining open-lock, skinning) are deftness% shorter.
-- A slotted pick or knife, while mod-gathering-tools is installed (its aura spell 90130/90131
-  exists) and its aura isn't up (no tool carried): gathering casts are
-  `GatheringTools.ToolGatherSpeed`% shorter (after Deftness) and the skill aura adds
-  `GatheringTools.ToolSkillBonus`, which is what that module gives for one in the bags.
+- A slotted pick or knife meets Mining's or Skinning's tool requirement, from a slot of any
+  profession, since a multitool can be both. The plain item gives no stats.
 - The Fishing aura (90812) adds the slotted rod's fishing skill: Mod Skill 356 from its equip
   spells and from the equip spells of its permanent (line) and temporary (lure) enchantments.
   Only while no rod is in the main hand (that one counts by itself, as worn). Recomputed on
@@ -168,9 +166,10 @@ rod itself, after the cast (`OnSpellCast`): the cast bar and the used-up lure st
 ## Tool requirements
 
 At startup the server records every trade skill spell's `Totem[2]` and `TotemCategory[2]`, and
-clears them in `SpellInfo`. The client patch clears the same fields (Spell.dbc 50, 51, 222, 223)
-on the same spells: every row with `Attributes & 0x20` (SPELL_ATTR0_IS_TRADESKILL) that has any
-of them set, except loot crafting (effect 0 is Create Item 2 with an item, and TotemCategory 0
+those of the 13 Mining and Skinning spells (TotemCategory 165 or 166, not marked as trade skills),
+and clears them in `SpellInfo`. The client patch clears the same fields (Spell.dbc 50, 51, 222, 223)
+on the same spells: those 13 and every row with `Attributes & 0x20` (SPELL_ATTR0_IS_TRADESKILL)
+that has any of them set, except loot crafting (effect 0 is Create Item 2 with an item, and TotemCategory 0
 is set, or Totem 0 with icon 1: Darkmoon cards, tarots, Prismatic Black Diamond), whose tool is
 what makes the core roll spell_loot_template; those 9 keep their tools and the core checks them.
 Before each cast the server checks the recorded tools itself, skipping casts from an item with
@@ -190,7 +189,7 @@ Wire format as in RetailProfessions.cpp: `<CMD>:<req>:<fields>`; list answers co
 | `G:<req>` slotted gear | `GD:<req>:<rows>` (any number), then `GE:<req>:<count>`. Row: `skill,slot,entry,itemGuid,count` |
 | `GQ:<req>:<bag>:<bagSlot>:<skill>:<slot>` equip | `GQ:<req>:ok:<skill>:<slot>` or `ERR:<req>:<code>`. bag 0 = backpack, 1-4 = bags; bagSlot counts from 1 (as GetContainerItemInfo). skill 0 = the item's own profession; slot 9 = first free fitting slot (tool slot for a tool/plain tool, else an empty accessory slot; a full set swaps the tool slot or the first accessory slot) |
 | `GU:<req>:<skill>:<slot>` unequip to bags | `GU:<req>:ok` or `ERR:<req>:<code>` |
-| `GT:<req>:<skill>` tool requirements (none for the gathering professions and Fishing) | `GTD:<req>:<rows>`, then `GTE:<req>:<count>`. Rows `T,<key>,<name>,<entry>/<entry>/...` define a tool: key `c<category>` or `i<item>`, name escaped, entries = items that meet it (gear items with counts_as included), at most 30. Rows `S,<spell>,<key>[/<key>]` give a recipe's tools. All T rows come before the S rows that use them |
+| `GT:<req>:<skill>` tool requirements (none for Herbalism and Fishing) | `GTD:<req>:<rows>`, then `GTE:<req>:<count>`. Rows `T,<key>,<name>,<entry>/<entry>/...` define a tool: key `c<category>` or `i<item>`, name escaped, entries = items that meet it (gear items with counts_as included), at most 30. Rows `S,<spell>,<key>[/<key>]` give a recipe's tools. All T rows come before the S rows that use them |
 
 Unasked, after any change (equip, unequip, a profession unlearned, login): `GD:0:...` rows then
 `GE:0:<count>`. On a Finesse proc: `PG:0:<skill>:F:<item>*<n>`.
