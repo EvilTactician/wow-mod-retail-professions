@@ -264,9 +264,9 @@ crafting speed**, earned by skill.
   two tools takes the second from an accessory slot or from the bags. Tools in the bags still
   count as before. The Engineering stat tools are multitools (a Gnomish Army Knife), so one slot
   covers the spanner, micro-adjustor and hammer.
-- **Gathering tools**: a Mining Pick or Skinning Knife goes in a Mining or Skinning slot, so it
-  needs no bag space. With mod-gathering-tools installed it gives what carrying one does (faster
-  gathering, and skill if that's set).
+- **Gathering tools**: Mining and Skinning need their tool, as they do in stock, but a Mining Pick
+  or Skinning Knife in a Mining or Skinning slot counts, so it needs no bag space. One in the bags
+  still works too.
 - **Fishing rod**, as retail has it: a rod in the Fishing slot fishes without being equipped, so
   the weapon stays on; the rod shows in the hands while the line is out. Lures and fishing lines
   go on it (no rod to click: using one applies it), its fishing skill and its lure's count, and

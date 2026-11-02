@@ -184,8 +184,7 @@ namespace RetailProfessions
             sConfig.gear = sConfigMgr->GetOption<bool>("RetailProfessions.Gear.Enable", true);
             sConfig.gearAccountWide = sConfigMgr->GetOption<bool>("RetailProfessions.Gear.AccountWide", true);
             sConfig.gearPersonalChallenges = sConfigMgr->GetOption<uint32>("RetailProfessions.Gear.PersonalChallenges", 15);
-            sConfig.gatherToolSkill = sConfigMgr->GetOption<int32>("GatheringTools.ToolSkillBonus", 0, false);
-            sConfig.gatherToolSpeed = std::clamp(sConfigMgr->GetOption<int32>("GatheringTools.ToolGatherSpeed", 25, false), 0, 100);
+            sConfig.bossSkinningDiscard = sConfigMgr->GetOption<bool>("RetailProfessions.BossSkinning.DiscardBotLoot", true);
             sConfig.progressionEnabled = sConfigMgr->GetOption<bool>("IndividualProgression.Enable", false, false);
             sConfig.progressionLimit = sConfigMgr->GetOption<uint8>("IndividualProgression.ProgressionLimit", 0, false);
             sConfig.zulGurubState = sConfigMgr->GetOption<uint8>("IndividualProgression.RequiredZulGurubProgression", 3, false);
@@ -434,8 +433,11 @@ public:
     }
 };
 
+void AddRetailProfessionsBossSkinningScripts();
+
 void AddRetailProfessionsScripts()
 {
+    AddRetailProfessionsBossSkinningScripts();
     new RetailProfessionsPlayerScript();
     new RetailProfessionsSpellScript();
     new RetailProfessionsGlobalScript();

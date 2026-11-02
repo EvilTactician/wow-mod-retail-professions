@@ -23,7 +23,7 @@ G.SLOTS = {
 G.TYPED_SLOTS = { [185] = 3, [356] = 2 }
 G.FISHING = 356
 G.LURE = 1 -- Fishing's second slot: a stack of lures
--- The gathering tools a slot takes as well (and mod-gathering-tools rewards carrying).
+-- The gathering tools a slot takes as well: Mining and Skinning need them, from a slot or the bags.
 G.GATHER_TOOL = { [186] = "Mining Pick", [393] = "Skinning Knife" }
 
 -- What each accessory slot takes (HELLO_GEAR_TYPED): the kind of item, the same in both tiers.

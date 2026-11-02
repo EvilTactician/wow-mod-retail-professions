@@ -211,3 +211,15 @@ RetailProfessions.Gear.AccountWide = 1
 #
 
 RetailProfessions.Gear.PersonalChallenges = 15
+
+#
+#    RetailProfessions.BossSkinning.DiscardBotLoot
+#        Description: Keeps bosses skinnable in groups with bots. A corpse can only be skinned once
+#                     nothing is left on it, and bots leave quest items, their own copies of
+#                     per-player items and unique items they already carry. Once the players have
+#                     taken everything they can, what is left is thrown away. Server.log says why a
+#                     boss can't be skinned yet.
+#        Default:     1
+#
+
+RetailProfessions.BossSkinning.DiscardBotLoot = 1
