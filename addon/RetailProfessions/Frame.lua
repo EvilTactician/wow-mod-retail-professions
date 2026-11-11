@@ -763,7 +763,8 @@ local function sayReopen()
 	RPF.Status((M.skillName or "The profession") .. " closed behind this window. Press Reopen, or open it from your spellbook.", true)
 end
 
-local reopenButton = RPF.CreateSpellButton(nil)
+-- Made when first needed: Secure.lua loads after this file.
+local reopenButton
 
 local function updateControls()
 	local r = RPF.selected
@@ -828,8 +829,9 @@ local function updateControls()
 	if p and p.openName then
 		createButton:SetText("Reopen")
 		RPF.SetEnabled(createButton, true)
+		reopenButton = reopenButton or RPF.CreateSpellButton(nil)
 		RPF.BindSpellButton(reopenButton, createButton, p.openName, RPF.Window())
-	else
+	elseif reopenButton then
 		RPF.BindSpellButton(reopenButton, nil, nil)
 	end
 end
