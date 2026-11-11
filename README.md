@@ -226,7 +226,9 @@ crafting speed**, earned by skill.
   the proc log button go into it; Training and Profit are pages of it; Milling and Prospecting
   are side tabs; tracked recipes go into its objective tracker; and K (or `/prof`) opens its
   Overview. There, `/prof classic` shows DragonUI's own crafting page and `/prof retail` brings
-  this one back.
+  this one back. If the profession closes behind DragonUI's window (opening a trade or inspect
+  window does that), **Create** turns into **Reopen**: click it to open the profession again,
+  then craft as usual. In combat it can't, and says to open the profession from your spellbook.
   Without DragonUI, everything above uses this addon's own window.
 - With [mod-reagent-bank-account](https://github.com/buildthehomelab/mod-reagent-bank-account)'s
   ReagentBankUI, everything its old profession sidebar did is in this window: the amount,

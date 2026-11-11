@@ -751,6 +751,20 @@ local function keyOf(r)
 	return r and (r.spell or r.key) or nil
 end
 
+-- The trade skill can end while the window stays up (a trade or inspect window, another profession;
+-- DragonUI's window outlives it): the client then reads UNKNOWN, and nothing can be cast until it's
+-- opened again. Create does that then, through a secure button over it (casting takes one).
+local function sessionClosed()
+	local line = GetTradeSkillLine()
+	return not RPF.active or not line or line == "UNKNOWN"
+end
+
+local function sayReopen()
+	RPF.Status((M.skillName or "The profession") .. " closed behind this window. Press Reopen, or open it from your spellbook.", true)
+end
+
+local reopenButton = RPF.CreateSpellButton(nil)
+
 local function updateControls()
 	local r = RPF.selected
 	local learned = r and r.learned and not M.linked
@@ -809,6 +823,15 @@ local function updateControls()
 	end
 	trackCheck:SetChecked(r and isTracked(r))
 	RPF.SetEnabled(trackCheck, r ~= nil)
+
+	local p = learned and not refine and sessionClosed() and RPF.Profession(M.skill)
+	if p and p.openName then
+		createButton:SetText("Reopen")
+		RPF.SetEnabled(createButton, true)
+		RPF.BindSpellButton(reopenButton, createButton, p.openName, RPF.Window())
+	else
+		RPF.BindSpellButton(reopenButton, nil, nil)
+	end
 end
 RPF.UpdateControls = updateControls
 
@@ -851,6 +874,11 @@ end)
 local function craft(count, noConfirm)
 	local r = RPF.selected
 	if not (r and r.learned) then return end
+	if not r.refine and sessionClosed() then
+		sayReopen()
+		updateControls()
+		return
+	end
 	if r.isEnchant then count = 1 end
 	-- Short in the bags but the bank has it: fetch it first, craft when it lands.
 	if usingBank() and not bagsCover(r, count) then
@@ -884,6 +912,10 @@ craftNow = function (r, count, noConfirm)
 	if r.refine then
 		RPF.Refine.Start(r, count)
 		quantity:ClearFocus()
+		return
+	end
+	if sessionClosed() then
+		sayReopen()
 		return
 	end
 	local index = M.IndexOf(r)
@@ -1142,11 +1174,21 @@ RPF.On("SHOW", function ()
 	M.ResetClientFilters()
 	RPF.RequestBankSnapshot()
 	RPF.Debounce("tradeskill", 0.05, function () RPF.Fire("TRADE_SKILL_UPDATE") end)
+	-- Reopened under a window that stayed up: Create goes back to crafting.
+	updateControls()
 end)
 
 RPF.On("CLOSE", function ()
 	-- Another addon's page (Pages.lua) has no need of the trade skill: it stays.
 	if not RPF.hosting and frame:IsShown() and not RPF.Pages.Current() then frame:Hide() end
+	-- DragonUI's window outlives the trade skill: a craft waiting on the bank can't happen now.
+	if RPF.hosting and hostOpen then
+		if pendingCraft then
+			pendingCraft = nil
+			sayReopen()
+		end
+		updateControls()
+	end
 end)
 
 -- On another addon's page its header; back from one, the profession's.
