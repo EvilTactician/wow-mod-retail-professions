@@ -67,6 +67,13 @@ namespace RetailProfessions::Index
             776, // Runeforging
         };
 
+        // Professions with ranks to train but no trade skill window: their ranks are indexed too.
+        constexpr std::array<uint32, 3> GATHERING = {
+            182, // Herbalism
+            393, // Skinning
+            356, // Fishing
+        };
+
         constexpr uint32 RACEMASK_ALLIANCE = 1101; // human, dwarf, night elf, gnome, draenei
         constexpr uint32 RACEMASK_HORDE = 690;     // orc, undead, tauren, troll, blood elf
 
@@ -209,6 +216,7 @@ namespace RetailProfessions::Index
             std::vector<uint32> recipeItems;
             std::vector<uint32> quests;
             std::vector<DiscoverySource> discoveries;
+            uint8 rank = 0; // a profession's rank (2 = Journeyman ... 6 = Grand Master), not a craft
         };
 
         struct Drop
@@ -263,6 +271,7 @@ namespace RetailProfessions::Index
         {
             std::unordered_map<uint32, Recipe> recipes;
             std::unordered_map<uint32, std::vector<uint32>> bySkill;
+            std::unordered_map<uint32, std::vector<uint32>> ranks; // skill * 8 + rank -> the spells that teach it
             std::unordered_map<uint32, ItemSources> items;
             std::unordered_map<uint32, std::vector<Spawn>> creatureSpawns;
             std::unordered_map<uint32, std::vector<Spawn>> objectSpawns;
@@ -492,6 +501,42 @@ namespace RetailProfessions::Index
                     recipe.reagents = reagents.empty() ? "-" : reagents;
 
                     sData.bySkill[skill].push_back(recipe.spell);
+                }
+            }
+        }
+
+        // Profession ranks: the spells whose Skill effect sets a profession's cap (rank x 75). They
+        // go in with the recipes so the readers below find their trainers, books and quests, but
+        // not in bySkill: the L lists and the stamp leave them out. K says where one is taught.
+        void ReadRanks()
+        {
+            auto ranked = [](uint32 skill)
+            {
+                return std::find(PROFESSIONS.begin(), PROFESSIONS.end(), skill) != PROFESSIONS.end()
+                    || std::find(GATHERING.begin(), GATHERING.end(), skill) != GATHERING.end();
+            };
+            for (uint32 id = 0; id < sSpellMgr->GetSpellInfoStoreSize(); ++id)
+            {
+                SpellInfo const* info = sSpellMgr->GetSpellInfo(id);
+                if (!info)
+                    continue;
+                for (SpellEffectInfo const& effect : info->GetEffects())
+                {
+                    if (effect.Effect != SPELL_EFFECT_SKILL || effect.MiscValue <= 0 || !ranked(uint32(effect.MiscValue)))
+                        continue;
+                    int32 rank = effect.CalcValue();
+                    if (rank < 1 || rank > 7)
+                        break;
+                    uint32 skill = uint32(effect.MiscValue);
+                    sData.ranks[skill * 8 + uint32(rank)].push_back(id);
+                    auto [itr, isNew] = sData.recipes.try_emplace(id);
+                    if (isNew)
+                    {
+                        itr->second.spell = id;
+                        itr->second.skill = skill;
+                        itr->second.rank = uint8(rank);
+                    }
+                    break;
                 }
             }
         }
@@ -1998,6 +2043,7 @@ namespace RetailProfessions::Index
         CollectSpawnedCreatures();
         ReadEventOnlyCreatures();
         ReadRecipes();
+        ReadRanks();
         ReadTrainers(service);
         ReadTeachers(service, objects);
         ReadRecipeItems(recipeItems);
@@ -2396,6 +2442,47 @@ namespace RetailProfessions::Index
         Send(player, "WR:" + req + ":" + std::to_string(spell) + ":" + std::to_string(recipeItem));
         SendRows(player, "WD:" + req, rows);
         Send(player, "WE:" + req);
+    }
+
+    // K:<req>:<skill>:<rank> -> where the player learns a profession's rank (2 = Journeyman ...
+    // 6 = Grand Master), answered as W is. Of the spells that set that rank, the one with the most
+    // sources for the player's faction: a trainer's, a book's or a quest's.
+    void HandleRank(Player* player, std::string const& req, std::vector<std::string_view> const& args)
+    {
+        uint32 skill = 0;
+        uint32 rank = 0;
+        if (args.size() < 4 || !ParseUInt(args[2], skill) || !ParseUInt(args[3], rank) || rank > 7)
+        {
+            SendError(player, req, "bad");
+            return;
+        }
+
+        uint8 team = TeamOf(player);
+        uint32 best = 0;
+        std::size_t bestSources = 0;
+        auto itr = sData.ranks.find(skill * 8 + rank);
+        if (itr != sData.ranks.end())
+            for (uint32 spell : itr->second)
+            {
+                Recipe const& recipe = sData.recipes.at(spell);
+                if (!(recipe.teams & team))
+                    continue;
+                std::size_t sources = recipe.trainers.size() + recipe.teachers.size() + recipe.quests.size()
+                    + (RecipeItemFor(player, recipe) ? 1 : 0);
+                if (sources > bestSources || (sources == bestSources && spell < best))
+                {
+                    best = spell;
+                    bestSources = sources;
+                }
+            }
+        if (!best)
+        {
+            SendError(player, req, "none");
+            return;
+        }
+
+        std::string spell = std::to_string(best);
+        HandleWhere(player, req, { args[0], args[1], spell });
     }
 
     // M:<req>:<kind>:<id> -> flags the nearest spawn on the map (when it's on the player's

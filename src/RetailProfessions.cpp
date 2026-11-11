@@ -208,7 +208,7 @@ namespace RetailProfessions
             uint32 orange = sWorld->getIntConfig(CONFIG_SKILL_CHANCE_ORANGE);
             uint32 grey = sWorld->getIntConfig(CONFIG_SKILL_CHANCE_GREY);
             uint32 gain = sWorld->getIntConfig(CONFIG_SKILL_GAIN_CRAFTING);
-            uint32 flags = HELLO_RECIPES | HELLO_MAP_PINS | HELLO_GUIDE | (sConfig.refine ? HELLO_REFINE : 0)
+            uint32 flags = HELLO_RECIPES | HELLO_MAP_PINS | HELLO_GUIDE | HELLO_RANKS | (sConfig.refine ? HELLO_REFINE : 0)
                 | (sConfig.perks ? HELLO_PERKS : 0) | (sConfig.gear ? HELLO_GEAR | HELLO_GEAR_GATHER | HELLO_GEAR_TYPED : 0)
                 | (sConfig.gear && Gear::AccountWide(player) ? HELLO_GEAR_ACCOUNT : 0);
             Send(player, "HELLO:" + req + ":" + std::to_string(PROTOCOL_VERSION) + ":"
@@ -264,6 +264,8 @@ namespace RetailProfessions
                 Index::HandleList(player, req, args);
             else if (command == "W")
                 Index::HandleWhere(player, req, args);
+            else if (command == "K")
+                Index::HandleRank(player, req, args);
             else if (command == "M")
                 Index::HandleMapPin(player, req, args);
             else if (!sConfig.gear && (command == "GC" || command == "G" || command == "GQ" || command == "GU" || command == "GT"))

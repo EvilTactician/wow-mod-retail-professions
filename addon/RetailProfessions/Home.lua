@@ -186,8 +186,9 @@ local function unlearnedOf(skill)
 end
 
 -- The professions with a window, as the tabs show them, and (second) the professions column's:
--- those and Archaeology, whose window is ArchaeologyUI's. Kept until skills change or a
--- profession opens: reading them opens and folds the Skills headers.
+-- those, Archaeology, whose window is ArchaeologyUI's, and Herbalism, Skinning and Fishing, which
+-- have none (their skill and next rank still show). Kept until skills change or a profession
+-- opens: reading them opens and folds the Skills headers.
 local professionCache, columnCache
 local function professions()
 	if professionCache then return professionCache, columnCache end
@@ -198,7 +199,7 @@ local function professions()
 		if p.openName and GetSpellInfo(p.openName) then
 			table.insert(out, known)
 			table.insert(column, known)
-		elseif p.archaeology then
+		elseif p.archaeology or not p.open then
 			table.insert(column, known)
 		end
 	end
@@ -570,6 +571,41 @@ local function trackedReady(add, byId)
 	end
 end
 
+-- Where a rank is taught, as lines for the Training line and its tooltip, nearest first:
+-- { text, pin = { kind, id, name } }. nil while the server's answer is on its way (or it can't
+-- say), {} when nothing teaches it. An answer that comes later redraws Training.
+local function sourceText(src, book)
+	local at = src.zone ~= "" and ", " .. src.zone or ""
+	if src.kind == "T" then return src.name .. " (trainer)" .. at end
+	if src.kind == "V" then return (book or "Its book") .. " from " .. src.name .. at end
+	if src.kind == "Q" or src.kind == "R" then
+		return "Quest: " .. src.name .. ((src.c or "") ~= "" and " from " .. src.c or "") .. at
+	end
+	return src.name .. at
+end
+
+local RANK_SOURCES = { T = true, V = true, N = true, G = true, Q = true, R = true }
+local function rankSources(skill, rank)
+	local result, now = nil, true
+	RPF.WhereToTrain(skill, rank, function (r, err)
+		result = r or false
+		if not now and (r or err ~= "busy") then RPF.Debounce("home", 0.1, H.Refresh) end
+	end)
+	now = false
+	if not result then return nil end
+	local info = RPF.Item(result.recipeItem)
+	local lines, far = {}, {}
+	for _, src in ipairs(result.rows) do
+		if RANK_SOURCES[src.kind] then
+			table.insert(lines, { text = sourceText(src, info and info.name), pin = { src.kind, src.id, src.name } })
+		elseif src.kind == "L" then
+			table.insert(far, { text = src.name .. ", where you can't go yet" })
+		end
+	end
+	for _, line in ipairs(far) do table.insert(lines, line) end
+	return lines
+end
+
 local function todoFor(add, known)
 	local p = known.profession
 	local skill, rank, maxRank = p.id, known.rank, known.maxRank
@@ -579,15 +615,23 @@ local function todoFor(add, known)
 	local nextCap = maxRank + 75
 	local level = TRAIN_LEVEL[nextCap]
 	if level and not p.class and maxRank < cap and known.baseRank >= maxRank - 25 then
+		-- Where: the server names the trainer, book or quest (some ranks have only one of them).
+		local where = rankSources(skill, nextCap / 75)
+		local first = where and where[1]
 		local sub
-		if (UnitLevel("player") or 0) < level then
+		if first then
+			sub = first.text .. ((UnitLevel("player") or 0) < level and string.format(", from level %d", level) or "")
+				.. string.format(". You're at %d/%d.", known.baseRank, maxRank)
+		elseif (UnitLevel("player") or 0) < level then
 			sub = string.format("From level %d, at a %s trainer. You're at %d/%d.", level, p.localName, known.baseRank, maxRank)
 		else
 			sub = string.format("At a %s trainer. You're at %d/%d.", p.localName, known.baseRank, maxRank)
 		end
 		add({ icon = p.texture, text = string.format("Train %s %s", RPF.RankTitle(nextCap), p.localName), sub = sub,
-			action = { skill = skill } })
+			where = where, action = first and first.pin and { pin = first.pin } or { skill = skill } })
 	end
+	-- Herbalism, Skinning and Fishing: no window, so no recipes; only their next rank.
+	if not p.open then return end
 
 	local recipes = H.RecipesOf(skill)
 	if not recipes then
@@ -669,7 +713,7 @@ local function todoFor(add, known)
 	end
 end
 
-local function todo(profs)
+local function todo(profs, column)
 	local items = {}
 	local function add(item) table.insert(items, item) end
 	local byId = {}
@@ -678,6 +722,10 @@ local function todo(profs)
 	readyCooldowns(add, byId)
 	trackedReady(add, byId)
 	for _, known in ipairs(profs) do todoFor(add, known) end
+	-- Herbalism, Skinning and Fishing: only the column has them.
+	for _, known in ipairs(column or {}) do
+		if not (known.profession.open or known.profession.archaeology) then todoFor(add, known) end
+	end
 	return items
 end
 
@@ -736,6 +784,18 @@ end
 
 function H.Run(action)
 	if not action then return end
+	-- Where a rank is taught: a flag on the map, as the recipe card's sources do.
+	if action.pin then
+		local kind, id, name = action.pin[1], action.pin[2], action.pin[3]
+		RPF.ShowOnMap(kind, id, function (where)
+			if where then
+				RPF.Print(name .. ": " .. where .. ". Marked on your map when it's on this continent.")
+			else
+				RPF.Print("Couldn't find " .. name .. " where you can reach it.")
+			end
+		end)
+		return
+	end
 	local p = RPF.Profession(action.skill)
 	if p and p.archaeology then
 		RPF.OpenArchaeology()
@@ -785,10 +845,14 @@ end
 
 local function clickHint(action)
 	if not action then return end
+	if action.pin then
+		GameTooltip:AddLine("Click to mark it on your map.", 0.5, 0.5, 0.5)
+		return
+	end
 	local p = RPF.Profession(action.skill)
 	if isOpen(action.skill) then
 		GameTooltip:AddLine(action.spell and "Click to open the recipe." or "Click to go there.", 0.5, 0.5, 0.5)
-	elseif p then
+	elseif p and (p.openName or p.archaeology) then
 		GameTooltip:AddLine("Click to open " .. p.localName .. ".", 0.5, 0.5, 0.5)
 	end
 end
@@ -913,7 +977,7 @@ function drawProfs(profs)
 			row.bar:SetValue(known.baseRank)
 			if isOpen(p.id) then row.lit:Show() else row.lit:Hide() end
 			row:Show()
-			bindAction(row, { skill = p.id })
+			bindAction(row, (p.openName or p.archaeology) and { skill = p.id } or nil)
 		else
 			row:Hide()
 			bindAction(row, nil)
@@ -952,6 +1016,11 @@ local function todoEnter(row, owner)
 	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
 	GameTooltip:SetText(item.text, 1, 1, 1, true)
 	GameTooltip:AddLine(item.sub, 0.8, 0.8, 0.8, true)
+	if item.where and #item.where > 1 then
+		GameTooltip:AddLine(" ")
+		GameTooltip:AddLine("Also taught by:", 1, 0.82, 0)
+		for i = 2, math.min(#item.where, 8) do GameTooltip:AddLine(item.where[i].text, 1, 1, 1, true) end
+	end
 	if item.guide then guideTip(item.guide) end
 	clickHint(item.action)
 	GameTooltip:Show()
@@ -1389,7 +1458,7 @@ local function refresh()
 	local rows, entries = crafts(profs)
 	lastEntries = entries
 	if view == "training" then
-		todoItems = todo(profs)
+		todoItems = todo(profs, column)
 		drawProfs(column)
 		drawTodo()
 	elseif view == "equipment" then

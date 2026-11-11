@@ -61,6 +61,7 @@ namespace RetailProfessions
         HELLO_GEAR_GATHER = 0x40, // picks and knives slot as Mining/Skinning tools; Fishing has a rod slot
         HELLO_GEAR_TYPED  = 0x80, // each accessory slot takes one kind (GC's kind is the slot); Cooking 3 slots, Fishing a lure slot
         HELLO_GEAR_ACCOUNT = 0x100, // this character's slots are the account's
+        HELLO_RANKS    = 0x200, // K says where a profession's rank is taught, gathering and Fishing's too
     };
 
     // What a craft of a recipe can get on top (the perks field of an L row).
@@ -149,6 +150,7 @@ namespace RetailProfessions
 
         void HandleList(Player* player, std::string const& req, std::vector<std::string_view> const& args);
         void HandleWhere(Player* player, std::string const& req, std::vector<std::string_view> const& args);
+        void HandleRank(Player* player, std::string const& req, std::vector<std::string_view> const& args);
         void HandleMapPin(Player* player, std::string const& req, std::vector<std::string_view> const& args);
     }
 

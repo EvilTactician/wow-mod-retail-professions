@@ -138,13 +138,14 @@ crafting speed**, earned by skill.
 - Pages that look across every profession you have, in the spirit of TradeSkillMaster's
   crafting overview, in place of the list and the recipe until you pick a profession tab again.
 - **Training**: your professions with their skill bars down the left (scrolling when you know
-  more than fit), and **Next steps** beside
+  more than fit; Herbalism, Skinning and Fishing too), and **Next steps** beside
   them, most urgent first:
   - cooldowns that are over (all transmutes on one line, since they share a timer),
   - tracked recipes you now have the materials for,
   - per profession: the next rank to train (from 25 points short of the cap, with the level the
-    trainer asks for), new recipes waiting at the trainer, what to make next for skill, and herbs
-    to mill or ore to prospect.
+    trainer asks for, and where: the nearest trainer, the book and who sells it, or the quest,
+    the others in its tooltip; click it to flag it on your map), new recipes waiting at the
+    trainer, what to make next for skill, and herbs to mill or ore to prospect.
 - **What to make next** follows the leveling routes of the
   [wow-professions.com WotLK guides](https://www.wow-professions.com/wotlk-classic) (1-450) for
   Alchemy, Blacksmithing, Enchanting, Engineering, Inscription, Jewelcrafting, Leatherworking,

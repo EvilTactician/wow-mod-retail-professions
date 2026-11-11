@@ -17,6 +17,7 @@ RPF.HELLO_GEAR = 32     -- profession equipment: GC, G, GQ, GU and GT (Gear.lua)
 RPF.HELLO_GEAR_GATHER = 64 -- picks and knives slot as tools; Fishing has a rod slot
 RPF.HELLO_GEAR_TYPED = 128 -- each accessory slot takes one kind; Cooking has 3 slots, Fishing a lure slot
 RPF.HELLO_GEAR_ACCOUNT = 256 -- this character's slots are the account's
+RPF.HELLO_RANKS = 512   -- K: where a profession's next rank is taught (gathering and Fishing too)
 
 -- What a craft of a recipe can get on top (the perks field of an L row).
 RPF.PERK_MULTICRAFT = 1
@@ -795,7 +796,8 @@ end
 -- One request per recipe at a time, and answers (refusals too, apart from "busy") are kept, so
 -- redraws on every bag change don't ask again.
 local whereCache, whereFailed, whereWaiting = {}, {}, {}
-function RPF.WhereToLearn(spell, handler)
+-- `spell` is the cache key: a recipe's spell, or "k<skill>:<rank>" for a rank (K).
+local function whereLookup(spell, cmd, fields, handler)
 	if whereCache[spell] then handler(whereCache[spell]) return end
 	if whereFailed[spell] then handler(nil, whereFailed[spell]) return end
 	if whereWaiting[spell] then
@@ -808,7 +810,7 @@ function RPF.WhereToLearn(spell, handler)
 		whereWaiting[spell] = nil
 		for _, h in ipairs(waiting) do h(result, err) end
 	end
-	RPF.Request("W", { tostring(spell) }, function (result, err)
+	RPF.Request(cmd, fields, function (result, err)
 		if not result then
 			if err ~= "busy" then whereFailed[spell] = err or "none" end
 			deliver(nil, err)
@@ -823,6 +825,20 @@ function RPF.WhereToLearn(spell, handler)
 		whereCache[spell] = out
 		deliver(out)
 	end)
+end
+
+function RPF.WhereToLearn(spell, handler)
+	whereLookup(spell, "W", { tostring(spell) }, handler)
+end
+
+-- Where a profession's rank (2 = Journeyman ... 6 = Grand Master) is taught: a trainer, a book
+-- on a vendor or a quest, as WhereToLearn answers. Nothing without HELLO_RANKS.
+function RPF.WhereToTrain(skill, rank, handler)
+	if not RPF.Has(RPF.HELLO_RANKS) then
+		handler(nil, "off")
+		return
+	end
+	whereLookup("k" .. skill .. ":" .. rank, "K", { tostring(skill), tostring(rank) }, handler)
 end
 
 -- Sources change with progression (a raid kill opens vendors and closes others): ask again
