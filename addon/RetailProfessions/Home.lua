@@ -178,7 +178,8 @@ local function unlearnedOf(skill)
 		if not set[spell] then
 			local name = GetSpellInfo(spell)
 			if name then
-				table.insert(out, { spell = spell, name = name, reqSkill = info.reqSkill, sources = info.sources })
+				table.insert(out, { spell = spell, name = name, reqSkill = info.reqSkill, sources = info.sources,
+					trainSkill = info.trainSkill, trainLevel = info.trainLevel })
 			end
 		end
 	end
@@ -642,11 +643,18 @@ local function todoFor(add, known)
 		return
 	end
 
-	-- Recipes a trainer would teach you now.
+	-- Recipes a trainer would teach you now: by what your faction's trainers ask, skill and level
+	-- (not a book's or a quest's easier way). Older servers don't say; then the recipe's own skill.
 	local learnable = {}
+	local level = UnitLevel("player") or 0
 	for _, r in ipairs(unlearnedOf(skill)) do
-		if bit.band(r.sources or 0, RPF.SRC_TRAINER) ~= 0 and (r.reqSkill or 0) <= rank
-				and (not RPF.skillCap or (r.reqSkill or 0) <= RPF.skillCap) then
+		local need = r.trainSkill
+		if need == nil and bit.band(r.sources or 0, RPF.SRC_TRAINER) ~= 0 then
+			need = r.reqSkill or 0
+		elseif need == 0 then
+			need = nil
+		end
+		if need and need <= rank and (not RPF.skillCap or need <= RPF.skillCap) and (r.trainLevel or 0) <= level then
 			table.insert(learnable, r)
 		end
 	end

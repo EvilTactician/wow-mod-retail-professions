@@ -1400,11 +1400,34 @@ namespace RetailProfessions::Index
                 });
         }
 
-        std::string ListRow(Recipe const& recipe, uint32 recipeItem)
+        // The skill and level the faction's least demanding trainer asks for the recipe, "0,0" when
+        // none of the faction's trainers teaches it. By faction only: the addon keeps lists by race
+        // and class, so nothing about one character (a specialization) can go in.
+        std::string TrainerReq(Recipe const& recipe, uint8 team)
         {
-            return Acore::StringFormat("{},{},{},{},{},{},{},{},{},{},{},{},{},{}", recipe.spell, recipe.reqSkill, recipe.yellow,
+            uint32 skill = 0;
+            uint32 level = 0;
+            for (TrainerSource const& t : recipe.trainers)
+            {
+                CreatureTemplate const* creature = sObjectMgr->GetCreatureTemplate(t.creature);
+                if (!creature || !(TeamsOfFaction(creature->faction) & team))
+                    continue;
+                uint32 need = std::max<uint32>(t.reqSkill, 1);
+                if (!skill || need < skill || (need == skill && t.reqLevel < level))
+                {
+                    skill = need;
+                    level = t.reqLevel;
+                }
+            }
+            return std::to_string(skill) + "," + std::to_string(level);
+        }
+
+        std::string ListRow(Recipe const& recipe, uint32 recipeItem, uint8 team)
+        {
+            return Acore::StringFormat("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}", recipe.spell, recipe.reqSkill, recipe.yellow,
                 recipe.grey, recipe.item, recipe.madeMin, recipe.madeMax, uint32(recipe.sources), recipe.reagents,
-                recipe.invType, recipe.quality, recipeItem, recipe.targetsItem ? 1 : 0, uint32(Perks::Flags(recipe.spell)));
+                recipe.invType, recipe.quality, recipeItem, recipe.targetsItem ? 1 : 0, uint32(Perks::Flags(recipe.spell)),
+                TrainerReq(recipe, team));
         }
 
         // FNV-1a over everything an L row can carry, so the addon's cache follows the data.
@@ -1428,7 +1451,8 @@ namespace RetailProfessions::Index
                 for (uint32 spell : itr->second)
                 {
                     Recipe const& recipe = sData.recipes[spell];
-                    mix(ListRow(recipe, recipe.recipeItems.empty() ? 0 : recipe.recipeItems.front()));
+                    mix(ListRow(recipe, recipe.recipeItems.empty() ? 0 : recipe.recipeItems.front(), TEAMBIT_ALLIANCE));
+                    mix(TrainerReq(recipe, TEAMBIT_HORDE));
                     mix(std::to_string(recipe.teams) + ":" + std::to_string(recipe.raceMask) + ":" + std::to_string(recipe.classMask));
                 }
             }
@@ -2076,7 +2100,8 @@ namespace RetailProfessions::Index
     // L:<req>:<skill> -> every recipe of the profession the player could learn or already knows.
     // Row: spell, required skill, yellow, grey, product item, made min, made max, source bits,
     // reagents ("id*n/id*n" or "-"), product inventory type, product quality, recipe item,
-    // 1 when it's cast on an item (an enchant, socket, buckle, lining...), PerkFlags.
+    // 1 when it's cast on an item (an enchant, socket, buckle, lining...), PerkFlags, and the skill
+    // and level the player's faction's trainers ask (0 and 0 when none of theirs teaches it).
     void HandleList(Player* player, std::string const& req, std::vector<std::string_view> const& args)
     {
         uint32 skill = 0;
@@ -2096,7 +2121,7 @@ namespace RetailProfessions::Index
             {
                 Recipe const& recipe = sData.recipes.at(spell);
                 if (everything || player->HasSpell(spell) || Learnable(player, recipe))
-                    rows.push_back(ListRow(recipe, RecipeItemFor(player, recipe)));
+                    rows.push_back(ListRow(recipe, RecipeItemFor(player, recipe), TeamOf(player)));
             }
 
         Send(player, "LR:" + req + ":" + std::to_string(skill) + ":" + std::to_string(rows.size()) + ":" + (everything ? "1" : "0"));

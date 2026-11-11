@@ -212,6 +212,7 @@ end
 
 local function attachServerData(recipe, info)
 	recipe.reqSkill = info.reqSkill
+	recipe.trainSkill, recipe.trainLevel = info.trainSkill, info.trainLevel
 	recipe.yellow, recipe.green, recipe.grey = info.yellow, info.green, info.grey
 	recipe.sources = info.sources
 	recipe.recipeItem = info.recipeItem

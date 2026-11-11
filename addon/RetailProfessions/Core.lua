@@ -734,7 +734,8 @@ end
 
 -- L row: spell, required skill, yellow, grey, product item, made min, made max, source bits,
 -- reagents ("id*n/id*n" or "-"), product inventory type, product quality, recipe item,
--- 1 when it's cast on an item, and the perks a craft can get (both missing from older servers).
+-- 1 when it's cast on an item, the perks a craft can get, and the skill and level your faction's
+-- trainers ask (0 and 0 when none of theirs teaches it); all missing from older servers.
 local function buildList(rows)
 	local list = {}
 	for _, r in ipairs(rows) do
@@ -750,6 +751,7 @@ local function buildList(rows)
 			}
 			-- nil from older servers: the addon falls back to its own guess.
 			if r[13] ~= nil then list[spell].targetsItem = tonumber(r[13]) == 1 end
+			list[spell].trainSkill, list[spell].trainLevel = tonumber(r[15]), tonumber(r[16])
 		end
 	end
 	return list
