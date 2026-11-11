@@ -1294,8 +1294,11 @@ namespace RetailProfessions::Index
             for (Teacher const& t : recipe.teachers)
                 if (t.reqSkill == recipe.skill)
                     consider(t.reqSkillValue);
+            // Only rows for everyone: a race's or class's own (death knights get First Aid's
+            // bandages with the skill) would otherwise read as "needs 1" for the rest.
             for (AutoRow const& row : recipe.autoRows)
-                consider(row.skill ? row.skill : 1);
+                if (!row.raceMask && !row.classMask)
+                    consider(row.skill ? row.skill : 1);
             if (need != std::numeric_limits<uint32>::max())
                 return need;
             if (recipe.reqSkill > 1)
