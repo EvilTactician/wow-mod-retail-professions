@@ -110,6 +110,9 @@ end
 provider.onScale = followWindow
 
 function provider.onPage(page)
+	-- Opening, DragonUI turns to its first page (Training, from the micro button or K) before
+	-- onShow: the window is open by then, or Training would read it as shut and go to the recipes.
+	if TradeSkillFrame and TradeSkillFrame:IsShown() then RPF.HostOpened() end
 	local view = viewOf(page)
 	if RPF.Home.view ~= view then RPF.Home.SetActive(view or false) end
 	-- Training's lines carry secure buttons: off another addon's page (Archaeology's), they go.
