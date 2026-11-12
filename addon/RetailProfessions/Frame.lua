@@ -943,8 +943,8 @@ craftNow = function (r, count, noConfirm)
 end
 
 -- The amount counts down as the casts finish, so after an interruption Create makes only
--- what's still to do. The box is shared, so it shows the count only while that recipe is
--- selected, and again when it's picked once more. An amount the player typed ends it.
+-- what's still to do, while that recipe stays selected. An amount the player typed, or picking
+-- another recipe, ends it.
 local function showCountdown()
 	local c = countdown
 	if not c then return end
@@ -1015,13 +1015,18 @@ end)
 -- selection and rebuilding
 
 function RPF.Select(r, reveal)
+	-- Another recipe starts at one: only the player (the amount, Create All) makes it more.
+	if keyOf(r) ~= keyOf(RPF.selected) then
+		countdown = nil
+		setQuantity(1)
+	end
 	RPF.selected = r
 	if r and r.learned and r.index and not M.linked then
 		local index = M.IndexOf(r)
 		if index and SelectTradeSkill then SelectTradeSkill(index) end
 	end
 	if r then M.Details(r) end
-	-- Back on a recipe that was crafting: what it still has to make.
+	-- Still on the recipe that was crafting: what it still has to make.
 	showCountdown()
 	RPF.Fire("SELECTED", r)
 	updateControls()

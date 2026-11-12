@@ -39,7 +39,8 @@ crafting speed**, earned by skill.
 - Hold **Shift** over a recipe, its icon or a tracked recipe to compare what it makes with what
   you have equipped, as with any other item.
 - **Reagents** as `have/need Name` (red when short), plus what's in the reagent bank.
-- **Track Recipe**, and under the recipe **Create All [n]**, the amount and **Create**. For
+- **Track Recipe**, and under the recipe **Create All [n]**, the amount and **Create**. The amount
+  is 1 for every recipe you pick; only you change it (or Create All). For
   enchants, an **Enchant** slot: drop the item on it once and every cast goes straight onto that
   item, no clicking the item each time. **Shift-click** Enchant to also skip the "replace the
   enchant?" and "binds it to you" questions for that cast (handy for enchanting skill-ups).
@@ -152,7 +153,7 @@ crafting speed**, earned by skill.
   Tailoring, Cooking and First Aid: "Level Alchemy: 25 Elixir of Healing Power", with how many the
   step still needs. Where the guide offers a choice, a recipe you know and have the materials for
   comes first. A recipe you don't know yet says where it's learned. The tooltip shows the route
-  ahead; clicking opens the recipe with the amount set; Shift-click puts its materials on your
+  ahead; clicking opens the recipe (the amount stays 1); Shift-click puts its materials on your
   shopping list. Where the guide only describes what to make ("any orange Glyph", "uncommon
   Northrend gems") or has nothing for your skill, the best skill-up you know stands in (one you
   can make now first, then the likeliest skill-up, then the cheapest).

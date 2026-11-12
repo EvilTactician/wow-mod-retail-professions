@@ -782,12 +782,9 @@ local function bindAction(region, action)
 	end
 end
 
--- Picks the recipe; a line from the leveling guide also sets the amount to what its step still
--- needs (an enchant you know stays at one: it goes on one item at a time).
+-- Picks the recipe. The amount stays at one: a leveling guide line's count is only a guide.
 local function openRecipe(action)
-	if not RPF.SelectSpell(action.spell) then return end
-	local r = RPF.selected
-	if action.count and r and not (r.learned and r.isEnchant) then RPF.SetQuantity(action.count) end
+	RPF.SelectSpell(action.spell)
 end
 
 function H.Run(action)
