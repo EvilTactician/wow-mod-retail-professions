@@ -184,19 +184,27 @@ for i = 1, MAX_REAGENTS do
 	slot.name:SetPoint("LEFT", slot, "RIGHT", 8, 0)
 	slot.name:SetWidth(REAGENT_TEXT_WIDTH)
 	slot.have = slot.name -- one line holds both
-	slot:SetScript("OnEnter", function (self)
-		itemTooltip(self, self.link)
-		if self.makes and self.link then
-			GameTooltip:AddLine("Click: the recipe that makes it", 0.25, 1, 0.25)
+	-- owner: the secure button over the slot when another profession makes the reagent.
+	slot:SetScript("OnEnter", function (self, owner)
+		itemTooltip(owner or self, self.link)
+		if self.link and (self.makes or self.other) then
+			GameTooltip:AddLine(self.other and ("Click: the recipe that makes it (" .. self.other.name .. ")")
+				or "Click: the recipe that makes it", 0.25, 1, 0.25)
 			GameTooltip:Show()
 		end
 	end)
 	slot:SetScript("OnLeave", RPF.HideItemTooltip)
-	-- As on retail: a reagent this profession makes opens its recipe.
+	-- As on retail: a reagent this profession makes opens its recipe. One another profession
+	-- makes opens that one through the secure button over the slot; this only runs in combat then.
 	slot:SetScript("OnClick", function (self)
-		if not linkOrNothing(self.link) and self.makes then RPF.SelectSpell(self.makes) end
+		if linkOrNothing(self.link) then return end
+		if self.makes then
+			RPF.SelectSpell(self.makes)
+		elseif self.other then
+			UIErrorsFrame:AddMessage("Professions can't be opened in combat.", 1, 0.1, 0.1)
+		end
 	end)
-	slot.Hide2 = function (self) self:Hide(); self.name:Hide() end
+	slot.Hide2 = function (self) self:Hide(); self.name:Hide(); self.other = nil end
 	slot.Show2 = function (self) self:Show(); self.name:Show() end
 	reagentSlots[i] = slot
 end
@@ -218,6 +226,43 @@ local function recipeMaking(id)
 	return found
 end
 
+-- A recipe you know in another profession you've opened before (Home.lua keeps what each
+-- knows) that makes an item: { skill, spell, name }.
+local function otherRecipeMaking(id)
+	if not id or not RPF.Home then return nil end
+	for skill in pairs(RetailProfessionsCharDB.homeLearned or {}) do
+		local p = skill ~= M.skill and RPF.Profession(skill)
+		-- Still known: the spell that opens it resolves by name only then.
+		if p and p.openName and GetSpellInfo(p.openName) then
+			for _, r in ipairs(RPF.Home.RecipesOf(skill) or {}) do
+				if r.item == id then return { skill = skill, spell = r.spell, name = p.localName } end
+			end
+		end
+	end
+	return nil
+end
+
+-- Opening another profession is a cast: a secure button over the slot, made when first needed
+-- (Secure.lua loads after this file).
+local function bindOther(slot)
+	local p = slot.other and RPF.Profession(slot.other.skill)
+	if p then
+		if not slot.button then
+			local b = RPF.CreateSpellButton(nil)
+			b:SetAttribute("shift-type1", "none") -- shift-click links the reagent instead
+			b.onEnter = function (self) slot:GetScript("OnEnter")(slot, self) end
+			b.preClick = function ()
+				if linkOrNothing(slot.link) or not slot.other then return end
+				RPF.Home.Pend({ skill = slot.other.skill, spell = slot.other.spell })
+			end
+			slot.button = b
+		end
+		RPF.BindSpellButton(slot.button, slot, p.openName, RPF.Window(), true)
+	elseif slot.button then
+		RPF.BindSpellButton(slot.button, nil, nil, nil, true)
+	end
+end
+
 local function drawReagents(r)
 	local shown = 0
 	-- The pane is narrower in DragonUI's window (Host.lua); the names stay inside it.
@@ -231,6 +276,7 @@ local function drawReagents(r)
 			local link = rg.link or (info and info.link) or (rg.id and ("item:" .. rg.id))
 			slot.link = link
 			slot.makes = recipeMaking(rg.id)
+			slot.other = not slot.makes and not M.linked and otherRecipeMaking(rg.id) or nil
 			slot:SetItem(rg.texture or (info and info.texture) or RPF.ItemIcon(rg.id), info and info.quality)
 			local reagentName = M.ReagentName(rg) or ("Item #" .. tostring(rg.id or "?"))
 			local bags = rg.id and GetItemCount(rg.id) or 0
@@ -251,6 +297,8 @@ local function drawReagents(r)
 			slot:Hide2()
 		end
 	end
+	for _, slot in ipairs(reagentSlots) do bindOther(slot) end
+	RPF.SyncSpellButtons()
 	if shown == 0 then noReagents:Show() else noReagents:Hide() end
 	return math.max(1, shown)
 end
@@ -796,7 +844,8 @@ local function showParts(on)
 	for _, p in ipairs(parts) do if on then p:Show() else p:Hide() end end
 	if not on then
 		noReagents:Hide()
-		for _, slot in ipairs(reagentSlots) do slot:Hide2() end
+		for _, slot in ipairs(reagentSlots) do slot:Hide2() bindOther(slot) end
+		RPF.SyncSpellButtons()
 		shopRow:Hide()
 		hideSources()
 		hidePrices()

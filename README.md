@@ -39,7 +39,8 @@ crafting speed**, earned by skill.
 - Hold **Shift** over a recipe, its icon or a tracked recipe to compare what it makes with what
   you have equipped, as with any other item.
 - **Reagents** as `have/need Name` (red when short), plus what's in the reagent bank. Click a
-  reagent this profession makes to jump to its recipe (shift-click still links it).
+  reagent this profession makes to jump to its recipe (shift-click still links it); one another
+  of your professions makes opens that profession on its recipe (once you've opened it before).
 - **Track Recipe**, and under the recipe **Create All [n]**, the amount and **Create**. The amount
   is 1 for every recipe you pick; only you change it (or Create All). For
   enchants, an **Enchant** slot: drop the item on it once and every cast goes straight onto that
