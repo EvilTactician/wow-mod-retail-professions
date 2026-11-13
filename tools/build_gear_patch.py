@@ -495,6 +495,11 @@ def stormlib():
     lib.SFileFindFirstFile.restype = handle
     lib.SFileFindNextFile.argtypes = [handle, ctypes.POINTER(FindData)]
     lib.SFileFindClose.argtypes = [handle]
+    # They return a C++ bool, one byte: read as ctypes' default int, the rest of the register can
+    # make false read true, and the file search never ends (100% CPU, then killed for memory).
+    for name in ("SFileOpenArchive", "SFileCreateArchive", "SFileExtractFile", "SFileAddFileEx",
+                 "SFileCloseArchive", "SFileFindNextFile", "SFileFindClose"):
+        getattr(lib, name).restype = ctypes.c_bool
     return lib, handle, FindData
 
 
@@ -508,7 +513,10 @@ def extract_all(mpq, folder):
     found = FindData()
     search = lib.SFileFindFirstFile(h, b"*", ctypes.byref(found), None)
     while search:
-        names.append(found.cFileName.decode())
+        name = found.cFileName.decode()
+        if name in names:  # the search came round again: stop rather than loop
+            break
+        names.append(name)
         if not lib.SFileFindNextFile(search, ctypes.byref(found)):
             break
     if search:
