@@ -429,6 +429,7 @@ public:
             // Before the index: it lists recipes as the client sees them, tools taken out.
             Gear::Build();
             Index::Build();
+            Gear::FreeLootCrafts();
             if (GetConfig().refine)
                 Refine::Build();
         }

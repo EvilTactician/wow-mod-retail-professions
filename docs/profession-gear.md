@@ -169,9 +169,11 @@ At startup the server records every trade skill spell's `Totem[2]` and `TotemCat
 those of the 13 Mining and Skinning spells (TotemCategory 165 or 166, not marked as trade skills),
 and clears them in `SpellInfo`. The client patch clears the same fields (Spell.dbc 50, 51, 222, 223)
 on the same spells: those 13 and every row with `Attributes & 0x20` (SPELL_ATTR0_IS_TRADESKILL)
-that has any of them set, except loot crafting (effect 0 is Create Item 2 with an item, and TotemCategory 0
-is set, or Totem 0 with icon 1: Darkmoon cards, tarots, Prismatic Black Diamond), whose tool is
-what makes the core roll spell_loot_template; those 9 keep their tools and the core checks them.
+that has any of them set, loot crafting included (effect 0 is Create Item 2 with an item, and
+TotemCategory 0 is set, or Totem 0 with icon 1: Darkmoon cards, tarots, Prismatic Black Diamond).
+Their tool is what makes the core roll spell_loot_template instead of creating the placeholder, so
+once the index has read what they make, the server also clears effect 0's item in `SpellInfo`: with
+no item the core rolls the loot all the same. The client keeps the item, to show what they make.
 Before each cast the server checks the recorded tools itself, skipping casts from an item with
 no reagent cost (enchanting scrolls), as the core does: a tool counts in the bags (or worn), or
 in any slot of the recipe's profession; a gear item with counts_as counts in the bags too.

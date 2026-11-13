@@ -228,6 +228,10 @@ namespace RetailProfessions
         // skill gets there, not only when it crosses a rank.
         void OnUpdateSkill(Player* player, uint32 skill, uint32 value, uint32 newValue);
 
+        // Takes the placeholder item out of the loot crafting recipes whose tools Build cleared.
+        // From OnStartup, after Index::Build has read what they make.
+        void FreeLootCrafts();
+
         // A recipe's tools: in the bags, worn, or in one of its profession's slots. Fishing and
         // lures: a rod in the main hand or in the Fishing slot.
         void OnCheckCast(Spell* spell, SpellCastResult& res);

@@ -168,6 +168,7 @@ namespace RetailProfessions::Gear
         };
 
         std::unordered_map<uint32, Need> sNeeds; // by spell
+        std::vector<uint32> sLootCrafts; // Darkmoon cards, tarots...: their placeholder goes (FreeLootCrafts)
 
         // What a profession's recipes need, for slotting plain tools and for GT.
         struct SkillTools
@@ -885,6 +886,7 @@ namespace RetailProfessions::Gear
         uint32 oldMSTime = getMSTime();
         sGear.clear();
         sNeeds.clear();
+        sLootCrafts.clear();
         sTools.clear();
         sToolsCleared = false;
         sPoleCasts.clear();
@@ -934,11 +936,11 @@ namespace RetailProfessions::Gear
             if (!info->Totem[0] && !info->Totem[1] && !info->TotemCategory[0] && !info->TotemCategory[1])
                 continue;
             // Darkmoon cards, tarots, Prismatic Black Diamond: the tool is what makes the core
-            // roll spell_loot_template instead of creating the placeholder (IsLootCrafting), so
-            // they keep it and the core checks it, in the bags. tools/build_gear_patch.py skips
-            // the same spells.
-            if (info->Effects[EFFECT_0].Effect == SPELL_EFFECT_CREATE_ITEM_2 && info->Effects[EFFECT_0].ItemType && info->IsLootCrafting())
-                continue;
+            // roll spell_loot_template instead of creating the placeholder (IsLootCrafting). Their
+            // tools go as well, and FreeLootCrafts takes the placeholder out instead: with no
+            // item the core rolls the loot all the same.
+            bool lootCraft = info->Effects[EFFECT_0].Effect == SPELL_EFFECT_CREATE_ITEM_2 && info->Effects[EFFECT_0].ItemType
+                && info->IsLootCrafting();
 
             Need need;
             need.totem = info->Totem;
@@ -957,6 +959,8 @@ namespace RetailProfessions::Gear
                 sToolsCleared = true;
                 info->Totem = { 0, 0 };
                 info->TotemCategory = { 0, 0 };
+                if (lootCraft)
+                    sLootCrafts.push_back(id);
             }
         }
 
@@ -1593,6 +1597,18 @@ namespace RetailProfessions::Gear
             Notify(player, Acore::StringFormat("{} is on your {} ({} left in the lure slot).", name, rod->GetTemplate()->Name1, left));
             SendState(player, "0");
         }
+    }
+
+    // After the index has read what they make: the loot crafting recipes lose their placeholder,
+    // so the core still rolls their loot with the tools gone (IsLootCrafting: no item).
+    void FreeLootCrafts()
+    {
+        for (uint32 id : sLootCrafts)
+            if (SpellInfo const* info = sSpellMgr->GetSpellInfo(id))
+                const_cast<SpellInfo*>(info)->_GetEffects()[EFFECT_0].ItemType = 0;
+        if (!sLootCrafts.empty())
+            LOG_INFO("server.loading", ">> mod-retail-professions: {} loot crafting recipes (Darkmoon cards, tarots...) without a placeholder",
+                sLootCrafts.size());
     }
 
     void OnCheckCast(Spell* spell, SpellCastResult& res)

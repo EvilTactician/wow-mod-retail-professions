@@ -197,21 +197,11 @@ def place_ours(dbc, ids, new_rows):
     return replaced
 
 
-SPELL_EFFECT_CREATE_ITEM_2 = 157
-
-
-def is_loot_crafting(row):
-    """SpellInfo::IsLootCrafting's test for a recipe with a placeholder item (Darkmoon cards,
-    tarots, Prismatic Black Diamond): its tool field is what makes the core roll
-    spell_loot_template instead of creating the placeholder, so it keeps its tools."""
-    return (row[F_EFFECT] == SPELL_EFFECT_CREATE_ITEM_2 and row[F_EFFECT_ITEM_TYPE] != 0
-            and (row[F_TOTEM_CATEGORY[0]] != 0 or (row[F_TOTEM[0]] != 0 and row[F_SPELL_ICON] == 1)))
-
-
 def clear_tools(spell, abilities):
-    """Clears Totem/TotemCategory on every trade skill spell that has any, except loot crafting
-    (see is_loot_crafting), and on Mining and Skinning; the same spells the server clears
-    (Gear::Build).
+    """Clears Totem/TotemCategory on every trade skill spell that has any, loot crafting (Darkmoon
+    cards, tarots) included, and on Mining and Skinning; the same spells the server clears
+    (Gear::Build, which takes the loot crafting recipes' placeholder out instead so they still
+    roll their loot).
     Returns (spells cleared, {skill line or 0 for none: count})."""
     skills = collections.defaultdict(set)
     for a in abilities.rows:
@@ -219,7 +209,7 @@ def clear_tools(spell, abilities):
     total, counts = 0, collections.Counter()
     for row in spell.rows:
         gather = row[F_TOTEM_CATEGORY[0]] in GATHER_TOOL_CATEGORIES
-        if (gather or row[F_ATTRIBUTES] & SPELL_ATTR0_IS_TRADESKILL) and any(row[f] for f in TOOL_FIELDS) and not is_loot_crafting(row):
+        if (gather or row[F_ATTRIBUTES] & SPELL_ATTR0_IS_TRADESKILL) and any(row[f] for f in TOOL_FIELDS):
             for f in TOOL_FIELDS:
                 row[f] = 0
             total += 1
