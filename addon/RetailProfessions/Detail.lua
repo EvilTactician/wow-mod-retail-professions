@@ -184,9 +184,18 @@ for i = 1, MAX_REAGENTS do
 	slot.name:SetPoint("LEFT", slot, "RIGHT", 8, 0)
 	slot.name:SetWidth(REAGENT_TEXT_WIDTH)
 	slot.have = slot.name -- one line holds both
-	slot:SetScript("OnEnter", function (self) itemTooltip(self, self.link) end)
+	slot:SetScript("OnEnter", function (self)
+		itemTooltip(self, self.link)
+		if self.makes and self.link then
+			GameTooltip:AddLine("Click: the recipe that makes it", 0.25, 1, 0.25)
+			GameTooltip:Show()
+		end
+	end)
 	slot:SetScript("OnLeave", RPF.HideItemTooltip)
-	slot:SetScript("OnClick", function (self) linkOrNothing(self.link) end)
+	-- As on retail: a reagent this profession makes opens its recipe.
+	slot:SetScript("OnClick", function (self)
+		if not linkOrNothing(self.link) and self.makes then RPF.SelectSpell(self.makes) end
+	end)
 	slot.Hide2 = function (self) self:Hide(); self.name:Hide() end
 	slot.Show2 = function (self) self:Show(); self.name:Show() end
 	reagentSlots[i] = slot
@@ -195,6 +204,19 @@ end
 local noReagents = label(pane, "GameFontDisableSmall")
 noReagents:SetPoint("TOPLEFT", reagentTitle, "BOTTOMLEFT", 0, -6)
 noReagents:SetText("No reagents.")
+
+-- The recipe of this profession that makes an item, a learned one first.
+local function recipeMaking(id)
+	if not id then return nil end
+	local found
+	for spell, r in pairs(M.bySpell) do
+		if r.item == id then
+			if r.learned then return spell end
+			found = found or spell
+		end
+	end
+	return found
+end
 
 local function drawReagents(r)
 	local shown = 0
@@ -208,6 +230,7 @@ local function drawReagents(r)
 			local info = rg.id and RPF.Item(rg.id)
 			local link = rg.link or (info and info.link) or (rg.id and ("item:" .. rg.id))
 			slot.link = link
+			slot.makes = recipeMaking(rg.id)
 			slot:SetItem(rg.texture or (info and info.texture) or RPF.ItemIcon(rg.id), info and info.quality)
 			local reagentName = M.ReagentName(rg) or ("Item #" .. tostring(rg.id or "?"))
 			local bags = rg.id and GetItemCount(rg.id) or 0

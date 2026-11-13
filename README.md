@@ -38,7 +38,8 @@ crafting speed**, earned by skill.
   `SkillGain.Crafting` above 1 it says how many points a skill-up gives.
 - Hold **Shift** over a recipe, its icon or a tracked recipe to compare what it makes with what
   you have equipped, as with any other item.
-- **Reagents** as `have/need Name` (red when short), plus what's in the reagent bank.
+- **Reagents** as `have/need Name` (red when short), plus what's in the reagent bank. Click a
+  reagent this profession makes to jump to its recipe (shift-click still links it).
 - **Track Recipe**, and under the recipe **Create All [n]**, the amount and **Create**. The amount
   is 1 for every recipe you pick; only you change it (or Create All). For
   enchants, an **Enchant** slot: drop the item on it once and every cast goes straight onto that
@@ -339,7 +340,7 @@ chances while a node's or skinned corpse's loot is rolled (`OnItemRoll`). The cl
 recipe's tools itself, so at startup the module takes the tools out of every trade skill spell,
 the client patch does the same in `Spell.dbc` (`tools/build_gear_patch.py`), and the module
 checks them before each cast: bags, worn or slots. A missing tool gets the client's own
-"Requires ..." message.
+"Requires ..." message, naming only the tools still missing.
 
 The Fishing slot works the same way: the client patch and the module take the main-hand rod out
 of Fishing and of every lure and fishing line (and the lure's item target, so the client casts it

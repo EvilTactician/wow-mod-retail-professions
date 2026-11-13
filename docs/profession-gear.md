@@ -178,7 +178,7 @@ Before each cast the server checks the recorded tools itself, skipping casts fro
 no reagent cost (enchanting scrolls), as the core does: a tool counts in the bags (or worn), or
 in any slot of the recipe's profession; a gear item with counts_as counts in the bags too.
 Another profession's gear can sit in a slot as a plain tool but gives no stats there. A missing tool fails the cast with the client's own
-"Requires X" message (an SMSG_CAST_FAILED carrying the recorded ids), then SPELL_FAILED_DONT_REPORT.
+"Requires X" message (an SMSG_CAST_FAILED carrying the recorded ids still missing: the client names the first it gets), then SPELL_FAILED_DONT_REPORT.
 
 ## Addon messages (RPR transport, HELLO flag 0x20 = HELLO_GEAR; 0x40 = HELLO_GEAR_GATHER: the Fishing rod slot and gathering tools; 0x80 = HELLO_GEAR_TYPED: one kind per accessory slot, GC's kind is the slot, Cooking 3 slots, Fishing a lure slot; 0x100 = HELLO_GEAR_ACCOUNT: this character's slots are the account's)
 

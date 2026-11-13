@@ -1637,26 +1637,34 @@ namespace RetailProfessions::Gear
         if (!sToolsCleared)
             return;
 
-        bool totemsMissing = false;
-        for (uint32 totem : need.totem)
+        // Only the tools still missing: the client names the first id it gets, so one the player
+        // has (a hammer slotted for a recipe that also needs a spanner) would be named instead.
+        std::array<uint32, 2> totemsMissing{};
+        for (std::size_t i = 0; i < need.totem.size(); ++i)
+        {
+            uint32 totem = need.totem[i];
             if (totem && !player->HasItemCount(totem) && !CarriesStandIn(player, totem)
                 && !AnySlotted(player, need.skill, [totem](Item const* item) { return MeetsTotem(item, totem); }))
-                totemsMissing = true;
+                totemsMissing[i] = totem;
+        }
 
-        bool categoriesMissing = false;
-        if (!totemsMissing)
-            for (uint32 category : need.category)
-                // A pick or knife counts from any profession's slot: a multitool can be both.
-                if (category && !player->HasItemTotemCategory(category)
-                    && !AnySlotted(player, GatherToolOfCategory(category) ? 0 : need.skill, [player, category](Item const* item) { return MeetsCategory(player, item, category); }))
-                    categoriesMissing = true;
+        std::array<uint32, 2> categoriesMissing{};
+        for (std::size_t i = 0; i < need.category.size(); ++i)
+        {
+            uint32 category = need.category[i];
+            // A pick or knife counts from any profession's slot: a multitool can be both.
+            if (category && !player->HasItemTotemCategory(category)
+                && !AnySlotted(player, GatherToolOfCategory(category) ? 0 : need.skill, [player, category](Item const* item) { return MeetsCategory(player, item, category); }))
+                categoriesMissing[i] = category;
+        }
 
-        if (!totemsMissing && !categoriesMissing)
+        bool anyTotem = totemsMissing[0] || totemsMissing[1];
+        if (!anyTotem && !categoriesMissing[0] && !categoriesMissing[1])
             return;
 
         // The client's own "Requires ..." message, with the tools the spell no longer carries.
-        SpellCastResult result = totemsMissing ? SPELL_FAILED_TOTEMS : SPELL_FAILED_TOTEM_CATEGORY;
-        std::array<uint32, 2> const& ids = totemsMissing ? need.totem : need.category;
+        SpellCastResult result = anyTotem ? SPELL_FAILED_TOTEMS : SPELL_FAILED_TOTEM_CATEGORY;
+        std::array<uint32, 2> const& ids = anyTotem ? totemsMissing : categoriesMissing;
         WorldPacket data(SMSG_CAST_FAILED, 1 + 4 + 1 + 8);
         data << uint8(spell->m_cast_count);
         data << uint32(spell->GetSpellInfo()->Id);

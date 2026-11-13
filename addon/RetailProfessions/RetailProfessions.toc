@@ -2,7 +2,7 @@
 ## Title: Retail Professions
 ## Notes: A retail-style profession window: search, filters, skill-up odds, unlearned recipes and where to learn them, a recipe tracker, Mill All and Prospect All, multicraft and resourcefulness odds with a proc log, a professions book (K), a craft-for-profit view priced from the auction house and a Training tab with what to do next (following the wow-professions.com leveling guides) and a Profit tab with the most profitable crafts, across every profession, and profession equipment: a tool slot and accessory slots for every profession, gathering ones too. Backed by the mod-retail-professions server module.
 ## Author: buildthehomelab
-## Version: 1.23.4
+## Version: 1.23.5
 ## OptionalDeps: DragonUI, ReagentBankUI, ArchaeologyUI
 ## SavedVariables: RetailProfessionsDB
 ## SavedVariablesPerCharacter: RetailProfessionsCharDB
