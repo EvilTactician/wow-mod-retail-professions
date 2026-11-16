@@ -41,6 +41,25 @@ crafting speed**, earned by skill.
 - **Reagents** as `have/need Name` (red when short), plus what's in the reagent bank. Click a
   reagent this profession makes to jump to its recipe (shift-click still links it); one another
   of your professions makes opens that profession on its recipe (once you've opened it before).
+- **Where each reagent comes from**, at a glance: a small picture after its name. A spanner for
+  one that's crafted (grey when you can't make it yourself), a coin for one a vendor sells, a
+  bag for one that drops, the gathering profession's own picture for one that's mined, picked,
+  fished, skinned, milled, prospected or disenchanted. One source each, the easiest: you craft
+  it, a vendor, you gather it, a drop, someone else's profession. Clicking the reagent does
+  what its source offers: the recipe, the nearest vendor or the likeliest creature flagged on
+  your map, the best zones to gather it in.
+- For a recipe you know, in the room "where to learn it" would take: **Get the reagents for
+  this recipe from**, a line per reagent ("You can craft this yourself.", "Buy from Wrahk -
+  Thunder Bluff", "Drops from Defias Looter (level 13-14) - Westfall - 32%", "Get this from
+  someone with Mining or buy from the Auction House."). Hover a line for every source the
+  realm knows, with the three likeliest creatures for a drop, by drop chance, among those your
+  faction can reach; click it for the same as the reagent. Vendors are the nearest to where
+  you stand, gathering zones leave out the other faction's own, and all of it follows your
+  progression as recipe sources do. A reagent the realm has no source for says "Source
+  unknown."
+- Nothing in the recipe pane runs over the options along its bottom edge: where to learn a
+  recipe and where its reagents come from show the lines there's room for, and the last one
+  then stands for the rest ("And 5 more sources (hover to see them)").
 - **Track Recipe**, and under the recipe **Create All [n]**, the amount and **Create**. The amount
   is 1 for every recipe you pick; only you change it (or Create All). For
   enchants, an **Enchant** slot: drop the item on it once and every cast goes straight onto that
@@ -391,12 +410,15 @@ Client: copy `addon/RetailProfessions` into `Interface/AddOns`. On realms using 
 
 The first start works out zones for the trainers, vendors and drops it needs and, with
 `RetailProfessions.SaveZoneData = 1`, saves them to `creature`/`gameobject`, so later starts are
-quicker.
+quicker. Where reagents come from (`RetailProfessions.ReagentSources`) adds to that: every
+vendor of a reagent, its likeliest creatures and chests, and up to 300 spawns of each herb and
+ore node to rank their zones, so the first start with it takes noticeably longer.
 
 ## Configuration
 
 See `conf/mod_retail_professions.conf.dist`: master switch, the era skill cap, hiding locked
-continents, how many sources per kind, the world-drop threshold, saving zones, Milling and
+continents, how many sources per kind, the world-drop threshold, saving zones, where reagents
+come from (`RetailProfessions.ReagentSources`), Milling and
 Prospecting from the window (`RetailProfessions.Refine.Enable`, `RetailProfessions.Refine.CastTime`),
 and the crafting perks (`RetailProfessions.Perks.Enable` and a `Min` / `Max` percent each for
 `Perks.Multicraft`, `Perks.Resourcefulness` (plus `Refund`) and `Perks.Speed`), and profession

@@ -599,7 +599,9 @@ end
 
 -- In DragonUI's window (Host.lua) the card is its own, narrower one: no card art of ours, and the
 -- reagent bank options go on a row above Track Recipe, the feedback line over them.
+local hostLayout = false
 function RPF.HostLayout(on)
+	hostLayout = on and true or false
 	if right.SetCardArtShown then right:SetCardArtShown(not on) end
 	bankCheck:ClearAllPoints()
 	status:ClearAllPoints()
@@ -611,6 +613,12 @@ function RPF.HostLayout(on)
 		status:SetPoint("BOTTOMLEFT", right, "BOTTOMLEFT", 12, 32)
 	end
 	status:SetPoint("RIGHT", right, "RIGHT", -110, 0)
+end
+
+-- How much of the recipe pane's bottom those options and the feedback line take: what the
+-- pane lists (where to learn a recipe, where its reagents come from) stops above it.
+function RPF.DetailReserve()
+	return hostLayout and 72 or 50
 end
 
 local function getQuantity()

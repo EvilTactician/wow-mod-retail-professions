@@ -18,6 +18,7 @@ RPF.HELLO_GEAR_GATHER = 64 -- picks and knives slot as tools; Fishing has a rod 
 RPF.HELLO_GEAR_TYPED = 128 -- each accessory slot takes one kind; Cooking has 3 slots, Fishing a lure slot
 RPF.HELLO_GEAR_ACCOUNT = 256 -- this character's slots are the account's
 RPF.HELLO_RANKS = 512   -- K: where a profession's next rank is taught (gathering and Fishing too)
+RPF.HELLO_REAGENTS = 1024 -- I: where a reagent comes from (a vendor, a drop, a node, another profession)
 
 -- What a craft of a recipe can get on top (the perks field of an L row).
 RPF.PERK_MULTICRAFT = 1
@@ -841,6 +842,16 @@ function RPF.WhereToTrain(skill, rank, handler)
 		return
 	end
 	whereLookup("k" .. skill .. ":" .. rank, "K", { tostring(skill), tostring(rank) }, handler)
+end
+
+-- Where a reagent comes from, as WhereToLearn answers (kinds in Detail.lua). The nearest vendor
+-- depends on where you are, so it's asked again in another zone. Nothing without HELLO_REAGENTS.
+function RPF.WhereToGet(item, handler)
+	if not RPF.Has(RPF.HELLO_REAGENTS) then
+		handler(nil, "off")
+		return
+	end
+	whereLookup("i" .. item .. ":" .. (GetRealZoneText() or ""), "I", { tostring(item) }, handler)
 end
 
 -- Sources change with progression (a raid kill opens vendors and closes others): ask again
