@@ -45,7 +45,10 @@ crafting speed**, earned by skill.
   one that's crafted (grey when you can't make it yourself), a coin for one a vendor sells, a
   bag for one that drops, the gathering profession's own picture for one that's mined, picked,
   fished, skinned, milled, prospected or disenchanted. One source each, the easiest: you craft
-  it, a vendor, you gather it, a drop, someone else's profession. Clicking the reagent does
+  it, a vendor with all you want of it, you gather it (every way you can: "You can prospect or
+  mine this yourself."), a vendor with limited stock, a drop, someone else's profession. A rare
+  drop (under 15%) doesn't stand in for a profession that gives the reagent: ore says Mining,
+  not the one creature that carries some. Clicking the reagent does
   what its source offers: the recipe, the nearest vendor or the likeliest creature flagged on
   your map, the best zones to gather it in.
 - For a recipe you know, in the room "where to learn it" would take: **Get the reagents for

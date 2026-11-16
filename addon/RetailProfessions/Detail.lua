@@ -207,7 +207,8 @@ for i = 1, MAX_REAGENTS do
 	slot.badge:Hide()
 	-- owner: the secure button over the slot when another profession makes the reagent.
 	slot:SetScript("OnEnter", function (self, owner)
-		itemTooltip(owner or self, self.link)
+		-- From the slot itself the second argument is the client's "motion" flag, not a frame.
+		itemTooltip(type(owner) == "table" and owner or self, self.link)
 		if self.link and self.source then
 			RPF.ReagentSourceLines(GameTooltip, self.source)
 			GameTooltip:Show()
@@ -901,11 +902,6 @@ end
 local GATHER = { H = true, F = true, K = true, E = true, M = true, J = true }
 local GATHER_SKILL = { F = 356, K = 393, E = 333, M = 773, J = 755 }
 local GATHER_ICON = { E = "Interface\\Icons\\INV_Enchant_Disenchant" }
-local GATHER_TEXT = {
-	E = "You can disenchant this from equipment yourself.",
-	M = "You can mill this yourself.",
-	J = "You can prospect this yourself.",
-}
 local REFINE_CODE = { M = "M", J = "P" }
 
 local function gatherSkill(src)
@@ -944,9 +940,30 @@ local function dropLine(src)
 	return string.format("Drops from %s %s(level %s)|r%s%s", src.name, GREY, tostring(src.b), where(src), chanceText(src.a))
 end
 
+-- "prospect or mine", "Mining or Jewelcrafting".
+local function either(words)
+	if #words < 2 then return words[1] or "" end
+	return table.concat(words, ", ", 1, #words - 1) .. " or " .. words[#words]
+end
+
+local function gatherVerb(src)
+	if src.kind == "H" then
+		local skill = tonumber(src.b)
+		return skill == 182 and "pick" or skill == 186 and "mine" or "fish"
+	end
+	return ({ F = "fish", K = "skin", E = "disenchant", M = "mill", J = "prospect" })[src.kind]
+end
+
+-- A drop worth sending someone after when a profession also gives the reagent: 15%.
+local GOOD_DROP = 1500
+
 -- The one source a reagent is shown with: { icon, dim, text } and what a click does (spell: a
 -- recipe here; other: a profession to open, through a secure button; refine: Milling or
--- Prospecting here; pin: a source to flag on the map; tell: something to say).
+-- Prospecting here; pin: a source to flag on the map; tell: sources to say where to gather).
+-- The easiest first: you craft it; a vendor with all you want of it; you gather it (every
+-- way you can: a gem is prospected and mined); a vendor with a few in stock; a drop, unless
+-- it's a rare one and a profession gives it; a vendor for tokens or on a holiday; someone
+-- else's profession.
 local function classify(slot, rows, waiting)
 	local function first(kinds, test)
 		for _, src in ipairs(rows or {}) do
@@ -967,17 +984,39 @@ local function classify(slot, rows, waiting)
 			or nil
 	end
 
-	local vendor = first({ V = true })
-	if vendor then
-		return { icon = SOURCE_ICON.vendor, text = "Buy from " .. vendor.name .. where(vendor), pin = vendor }
+	local function vendorLine(v, extra)
+		return { icon = SOURCE_ICON.vendor, text = "Buy from " .. v.name .. where(v) .. (extra or ""), pin = v }
 	end
+	local V = { V = true }
+	local plain = first(V, function (v) return (tonumber(v.b) or 0) == 0 and (v.note or "") == "" end)
+	if plain then return vendorLine(plain) end
 
-	local mine = first(GATHER, function (src) return knows(gatherSkill(src)) end)
-	if mine then
-		local s = { icon = gatherIcon(mine), text = GATHER_TEXT[mine.kind] or "You can gather this yourself.", tell = mine }
-		local code = REFINE_CODE[mine.kind]
+	-- Every way to gather it, one per profession: yours, and the others'.
+	local mine, theirs, seen = {}, {}, {}
+	for _, src in ipairs(rows) do
+		local skill = GATHER[src.kind] and gatherSkill(src)
+		if skill and not seen[skill] then
+			seen[skill] = true
+			table.insert(knows(skill) and mine or theirs, src)
+		end
+	end
+	local function professions(list, into)
+		for _, src in ipairs(list) do
+			local p = RPF.Profession(gatherSkill(src) or 0)
+			if p then table.insert(into, p.localName) end
+		end
+		return into
+	end
+	if #mine > 0 then
+		local verbs = {}
+		for _, src in ipairs(mine) do table.insert(verbs, gatherVerb(src)) end
+		local text = "You can " .. either(verbs) .. " this yourself."
+		if #theirs > 0 then text = text .. " Also from " .. either(professions(theirs, {})) .. "." end
+		local lead = mine[1]
+		local s = { icon = gatherIcon(lead), text = text, tell = mine }
+		local code = REFINE_CODE[lead.kind]
 		if code and RPF.Refine.Known(code) then
-			local skill = gatherSkill(mine)
+			local skill = gatherSkill(lead)
 			if M.skill == skill and not M.linked then
 				s.refine = code
 			else
@@ -988,50 +1027,60 @@ local function classify(slot, rows, waiting)
 		return s
 	end
 
-	local drop = first({ D = true }) or first({ O = true }) or first({ X = true }) or first({ C = true })
-	if drop then
+	local limited = first(V, function (v) return (v.note or "") == "" end)
+	if limited then return vendorLine(limited, GREY .. " (limited stock)|r") end
+
+	local by = first({ B = true })
+	local profession = made or by or #theirs > 0
+	local function dropSource(drop)
 		return { icon = SOURCE_ICON.drop, text = dropLine(drop), pin = (drop.kind == "D" or drop.kind == "O") and drop or nil }
 	end
+	local good = first({ D = true }, function (d) return (tonumber(d.a) or 0) >= GOOD_DROP end)
+	local drop = good or (not profession and (first({ D = true }) or first({ O = true }) or first({ X = true }) or first({ C = true })))
+	if drop then return dropSource(drop) end
+
+	local special = first(V)
+	if special then return vendorLine(special, GREY .. " (" .. special.note .. ")|r") end
 
 	if made then
 		return { icon = SOURCE_ICON.craft, dim = true, text = "You haven't learned to craft this yet.", spell = slot.makes }
 	end
-	local by = first({ B = true })
-	if by then
-		return { icon = SOURCE_ICON.craft, dim = true,
-			text = "Get this from someone with " .. by.name .. " or buy from the Auction House." }
-	end
-	local theirs = first(GATHER)
-	if theirs then
-		local p = RPF.Profession(gatherSkill(theirs) or 0)
-		return { icon = gatherIcon(theirs), dim = true,
-			text = "Get this from someone with " .. (p and p.localName or "the profession") .. " or buy from the Auction House." }
+	if by or #theirs > 0 then
+		local names = {}
+		for _, src in ipairs(rows) do
+			if src.kind == "B" then table.insert(names, src.name) end
+		end
+		professions(theirs, names)
+		return { icon = by and SOURCE_ICON.craft or gatherIcon(theirs[1]), dim = true,
+			text = "Get this from someone with " .. either(names) .. " or buy from the Auction House." }
 	end
 	if first({ L = true }) then return { text = "Nowhere you can reach yet; try the Auction House." } end
 	return { text = "Source unknown." }
 end
 
--- Where to gather it, said in the window and kept in chat.
-local function tellGather(src, name)
-	local zones = (src.c or "") ~= "" and src.c or nil
-	local p = RPF.Profession(gatherSkill(src) or 0)
-	local skill = p and p.localName or ""
-	local text
-	if src.kind == "H" then
-		text = string.format("%s: gather it from %s%s.", name, src.name ~= "" and src.name or "its nodes",
-			zones and (", most of all in " .. zones) or "")
-		if (tonumber(src.a) or 0) > 1 then text = text .. string.format(" Needs %s %s.", skill, tostring(src.a)) end
-	elseif src.kind == "F" then
-		text = string.format("%s: fish for it in %s.", name, zones or src.name)
-	elseif src.kind == "K" then
-		text = string.format("%s: skin it from %s%s.", name, src.name, src.id ~= 0 and src.zone ~= "" and (" in " .. src.zone) or "")
-	elseif src.kind == "E" then
-		text = name .. ": disenchant equipment for it."
-	else
-		text = string.format("%s: %s %s for it.", name, src.kind == "M" and "mill" or "prospect", src.name)
+-- Where to gather it, every way you can: said in the window and kept in chat.
+local function tellGather(sources, name)
+	for n, src in ipairs(sources) do
+		local zones = (src.c or "") ~= "" and src.c or nil
+		local p = RPF.Profession(gatherSkill(src) or 0)
+		local skill = p and p.localName or ""
+		local text
+		if src.kind == "H" then
+			text = string.format("%s: %s it from %s%s.", name, gatherVerb(src), src.name ~= "" and src.name or "its nodes",
+				zones and (", most of all in " .. zones) or "")
+			if (tonumber(src.a) or 0) > 1 then text = text .. string.format(" Needs %s %s.", skill, tostring(src.a)) end
+		elseif src.kind == "F" then
+			text = string.format("%s: fish for it in %s.", name, zones or src.name)
+		elseif src.kind == "K" then
+			text = string.format("%s: skin it from %s%s.", name, src.name, src.id ~= 0 and src.zone ~= "" and (" in " .. src.zone) or "")
+		elseif src.kind == "E" then
+			text = name .. ": disenchant equipment for it."
+		else
+			text = string.format("%s: %s %s for it.", name, src.kind == "M" and "mill" or "prospect", src.name)
+		end
+		if n == 1 then RPF.Status(text) end
+		RPF.Print(text)
 	end
-	RPF.Status(text)
-	RPF.Print(text)
 end
 
 function RPF.ReagentSourceAct(s, name)
@@ -1066,7 +1115,7 @@ function RPF.ReagentSourceLines(tip, s)
 	elseif s.pin then
 		hint = canPin(s.pin) and "Click: mark it on your world map" or nil
 	elseif s.tell then
-		hint = "Click: where to get it"
+		hint = "Click: where to get it (in chat)"
 	end
 	if hint then tip:AddLine(hint, 0.25, 1, 0.25) end
 end
@@ -1095,7 +1144,7 @@ for i = 1, MAX_REAGENTS do
 	hl:SetAlpha(0.4)
 	-- owner: the secure button over the line when the click opens another profession.
 	row:SetScript("OnEnter", function (self, owner)
-		GameTooltip:SetOwner(owner or self, "ANCHOR_RIGHT")
+		GameTooltip:SetOwner(type(owner) == "table" and owner or self, "ANCHOR_RIGHT")
 		if self.tip then
 			self.tip(GameTooltip)
 		else
@@ -1232,6 +1281,8 @@ local function showParts(on)
 	end
 end
 
+local settling = false -- drawing again to measure, not for a change
+
 local function draw(r)
 	gearStrip:SetSkill(not M.linked and M.skill or nil)
 	if not r then
@@ -1330,6 +1381,19 @@ local function draw(r)
 		drawSources(r, below)
 	end
 	drawGet(r, below)
+	-- How many lines fit is measured, and what was placed just now (after another recipe, or
+	-- another profession's) only has its place on screen a moment later: once more then.
+	if not settling then
+		RPF.Debounce("detail-fit", 0.05, function () RPF.DetailRefit(r, true) end)
+	end
+end
+
+function RPF.DetailRefit(r, again)
+	if RPF.selected ~= r or not pane:IsVisible() then return end
+	settling = true
+	draw(r)
+	settling = false
+	if again then RPF.After(0.3, function () RPF.DetailRefit(r, false) end) end
 end
 
 shopButton:SetScript("OnClick", function ()

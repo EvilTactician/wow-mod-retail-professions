@@ -56,8 +56,9 @@ function H.Shown(key)
 	return view and (not view.gear or RPF.Gear.Enabled()) or false
 end
 
--- The level each rank's trainer asks for (Journeyman ... Grand Master).
-local TRAIN_LEVEL = { [150] = 10, [225] = 20, [300] = 35, [375] = 50, [450] = 65 }
+-- The ranks a trainer teaches (Journeyman ... Grand Master). The level one asks for comes with
+-- the trainer from the realm: it differs by profession (gathering asks less) and by database.
+local TRAINED_RANK = { [150] = true, [225] = true, [300] = true, [375] = true, [450] = true }
 
 -- "training", "profit", "equipment" or nil (the recipes).
 H.view = nil
@@ -598,7 +599,9 @@ local function rankSources(skill, rank)
 	local lines, far = {}, {}
 	for _, src in ipairs(result.rows) do
 		if RANK_SOURCES[src.kind] then
-			table.insert(lines, { text = sourceText(src, info and info.name), pin = { src.kind, src.id, src.name } })
+			-- A trainer's row ends with the level it asks for.
+			table.insert(lines, { text = sourceText(src, info and info.name), pin = { src.kind, src.id, src.name },
+				level = src.kind == "T" and tonumber(src.c) or nil })
 		elseif src.kind == "L" then
 			table.insert(far, { text = src.name .. ", where you can't go yet" })
 		end
@@ -614,17 +617,15 @@ local function todoFor(add, known)
 
 	-- The next rank: trainers teach it from 25 points short of the cap. Runeforging has none.
 	local nextCap = maxRank + 75
-	local level = TRAIN_LEVEL[nextCap]
-	if level and not p.class and maxRank < cap and known.baseRank >= maxRank - 25 then
+	if TRAINED_RANK[nextCap] and not p.class and maxRank < cap and known.baseRank >= maxRank - 25 then
 		-- Where: the server names the trainer, book or quest (some ranks have only one of them).
 		local where = rankSources(skill, nextCap / 75)
 		local first = where and where[1]
 		local sub
 		if first then
+			local level = first.level or 0
 			sub = first.text .. ((UnitLevel("player") or 0) < level and string.format(", from level %d", level) or "")
 				.. string.format(". You're at %d/%d.", known.baseRank, maxRank)
-		elseif (UnitLevel("player") or 0) < level then
-			sub = string.format("From level %d, at a %s trainer. You're at %d/%d.", level, p.localName, known.baseRank, maxRank)
 		else
 			sub = string.format("At a %s trainer. You're at %d/%d.", p.localName, known.baseRank, maxRank)
 		end
