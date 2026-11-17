@@ -42,17 +42,30 @@ function RPF.BindSpellButton(b, region, spell, host, defer)
 	if not defer then RPF.SyncSpellButtons() end
 end
 
+-- Only what changed is set: a whole page of buttons re-placed at once was a hitch.
 local function place(b)
 	local region = b.region
 	local scale = region:GetEffectiveScale() / UIParent:GetEffectiveScale()
 	local left, top = region:GetLeft(), region:GetTop()
 	if not (left and top) then return false end
-	if b.host then b:SetFrameStrata(b.host:GetFrameStrata()) end
-	b:SetFrameLevel(region:GetFrameLevel() + 3)
-	b:ClearAllPoints()
-	b:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left * scale, top * scale)
-	b:SetSize(region:GetWidth() * scale, region:GetHeight() * scale)
+	local strata = b.host and b.host:GetFrameStrata()
+	if strata and strata ~= b:GetFrameStrata() then b:SetFrameStrata(strata) end
+	local level = region:GetFrameLevel() + 3
+	if level ~= b:GetFrameLevel() then b:SetFrameLevel(level) end
+	local x, y, w, h = left * scale, top * scale, region:GetWidth() * scale, region:GetHeight() * scale
+	local at = b.placed
+	if not at or at[1] ~= x or at[2] ~= y then
+		b:ClearAllPoints()
+		b:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
+	end
+	if not at or at[3] ~= w or at[4] ~= h then b:SetSize(w, h) end
+	b.placed = { x, y, w, h }
 	return true
+end
+
+-- The window is being dragged (or was a moment ago): redrawing waits.
+function RPF.Dragging()
+	return (RPF.MovedAt or 0) > GetTime() - 0.3 and IsMouseButtonDown("LeftButton")
 end
 
 function RPF.SyncSpellButtons()

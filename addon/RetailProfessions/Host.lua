@@ -169,11 +169,17 @@ local function addViews(H)
 					holders[key] = holder
 					-- The lines carry secure buttons placed by screen position. The window moves
 					-- when another panel opens beside it; while the page shows, they follow.
-					local lastLeft, lastTop
+					-- While it's dragged they wait for the mouse to let go: placing them (and
+					-- redrawing the page, RPF.Dragging) at every pause of the drag made it lag.
+					local lastLeft, lastTop, moved
 					holder:SetScript("OnUpdate", function ()
 						local left, top = TradeSkillFrame:GetLeft(), TradeSkillFrame:GetTop()
 						if left ~= lastLeft or top ~= lastTop then
-							lastLeft, lastTop = left, top
+							lastLeft, lastTop, moved = left, top, true
+							RPF.MovedAt = GetTime()
+						end
+						if moved and not IsMouseButtonDown("LeftButton") then
+							moved = false
 							followWindow()
 						end
 					end)

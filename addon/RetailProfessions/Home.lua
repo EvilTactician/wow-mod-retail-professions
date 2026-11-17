@@ -86,6 +86,8 @@ local function isOpen(skill)
 	return RPF.IsOpen() and M.skill == skill and not M.linked
 end
 
+local refreshSoon -- Training or Profit again shortly (set below, used from the start)
+
 local function charDB()
 	local db = RetailProfessionsCharDB
 	db.homeLearned = db.homeLearned or {}
@@ -119,6 +121,49 @@ local function snapshot()
 end
 
 RPF.On("SCANNED", function () RPF.Debounce("home-snapshot", 0.3, snapshot) end)
+
+-- A recipe learned while its profession is closed (at the trainer, from a recipe item): into
+-- what that profession knows now, so Training stops offering it before the next visit there.
+-- The client says so in chat: "You have learned how to create a new item: %s." or "You have
+-- learned a new spell: %s."
+local learnedPatterns = {}
+for _, format in ipairs({ ERR_LEARN_RECIPE_S, ERR_LEARN_SPELL_S }) do
+	if type(format) == "string" then
+		local pattern = format:gsub("%%s", "\001"):gsub("([%%%(%)%.%+%-%*%?%[%]%^%$])", "%%%1"):gsub("\001", "(.+)")
+		table.insert(learnedPatterns, "^" .. pattern .. "$")
+	end
+end
+
+local function learnedByName(name)
+	local db = charDB()
+	for skill, set in pairs(db.homeLearned) do
+		local list = not isOpen(skill) and RPF.RecipeList(skill)
+		for spell in pairs(list or {}) do
+			if not set[spell] and GetSpellInfo(spell) == name then
+				-- A new table: H.RecipesOf rebuilds when the set changes.
+				local copy = { [spell] = true }
+				for known in pairs(set) do copy[known] = true end
+				db.homeLearned[skill] = copy
+				if refreshSoon then refreshSoon() end
+				return
+			end
+		end
+	end
+end
+
+local learnEvents = CreateFrame("Frame")
+learnEvents:RegisterEvent("CHAT_MSG_SYSTEM")
+learnEvents:SetScript("OnEvent", function (_, _, message)
+	for _, pattern in ipairs(learnedPatterns) do
+		local name = message and message:match(pattern)
+		if name then
+			-- The name comes as a spell link: "|cff71d5ff|Hspell:...|h[Name]|h|r".
+			name = name:match("%[(.-)%]") or name
+			learnedByName(name)
+			return
+		end
+	end
+end)
 RPF.On("COOLDOWN", function () RPF.Debounce("home-snapshot", 0.3, snapshot) end)
 
 local built = {} -- skill -> { set, list, recipes }
@@ -599,15 +644,22 @@ local function rankSources(skill, rank)
 	local lines, far = {}, {}
 	for _, src in ipairs(result.rows) do
 		if RANK_SOURCES[src.kind] then
-			-- A trainer's row ends with the level it asks for.
+			-- The level it asks for: a trainer's row ends with it, a quest's has it second
+			-- (Fishing's Artisan rank is Nat Pagle's quest, from level 35).
+			local level = src.kind == "T" and tonumber(src.c)
+				or (src.kind == "Q" or src.kind == "R") and tonumber(src.b) or nil
 			table.insert(lines, { text = sourceText(src, info and info.name), pin = { src.kind, src.id, src.name },
-				level = src.kind == "T" and tonumber(src.c) or nil })
+				level = level })
 		elseif src.kind == "L" then
 			table.insert(far, { text = src.name .. ", where you can't go yet" })
 		end
 	end
-	for _, line in ipairs(far) do table.insert(lines, line) end
-	return lines
+	-- The ones you can use at your level first.
+	local me, usable, later = UnitLevel("player") or 0, {}, {}
+	for _, line in ipairs(lines) do table.insert((line.level or 0) <= me and usable or later, line) end
+	for _, line in ipairs(later) do table.insert(usable, line) end
+	for _, line in ipairs(far) do table.insert(usable, line) end
+	return usable
 end
 
 local function todoFor(add, known)
@@ -882,6 +934,19 @@ local function viewHeight(scroll)
 	return scroll:GetHeight() or 0
 end
 
+-- OnSizeChanged also fires while the window is dragged (its frames are laid out again every
+-- frame) with the size unchanged: redrawing a list and placing its secure buttons each time
+-- made dragging lag behind the mouse. Only a real change of size redraws.
+local function onResize(scroll, fn)
+	local lastW, lastH
+	scroll:HookScript("OnSizeChanged", function (self, w, h)
+		w, h = math.floor((w or self:GetWidth() or 0) + 0.5), math.floor((h or self:GetHeight() or 0) + 0.5)
+		if w == lastW and h == lastH then return end
+		lastW, lastH = w, h
+		fn()
+	end)
+end
+
 local function fitRows(scroll, rows, minimum, height, make)
 	local fit = math.max(minimum, math.floor(viewHeight(scroll) / height))
 	if not RPF.InCombat() then
@@ -1099,7 +1164,7 @@ function drawTodo()
 	end
 end
 
-todoScroll:HookScript("OnSizeChanged", function ()
+onResize(todoScroll, function ()
 	if trainingPanel:IsVisible() then
 		drawTodo()
 		RPF.SyncSpellButtons()
@@ -1116,7 +1181,6 @@ paneTitle(craftPane, "Most profitable crafts")
 
 local craftRows = {}
 local lastEntries = {}
-local refreshSoon
 
 local refreshButton = RPF.CreateButton(craftPane, "Refresh", 70, 20)
 refreshButton:SetPoint("TOPRIGHT", craftPane, "TOPRIGHT", -8, -5)
@@ -1299,7 +1363,7 @@ function drawCrafts()
 	end
 end
 
-craftScroll:HookScript("OnSizeChanged", function ()
+onResize(craftScroll, function ()
 	if profitPanel:IsVisible() then
 		drawCrafts()
 		RPF.SyncSpellButtons()
@@ -1495,8 +1559,17 @@ H.Refresh = refresh
 H.rows = { todo = todoRows, crafts = craftButtons, profs = profRows, cards = cardRows }
 H.scrolls = { todo = todoScroll, crafts = craftScroll, profs = profScroll, cards = equipScroll }
 
+-- Not while the window is dragged: a redraw then is what made dragging stutter.
+local function refreshWhenStill()
+	if RPF.Dragging() then
+		RPF.Debounce("home", 0.2, refreshWhenStill)
+	else
+		refresh()
+	end
+end
+
 refreshSoon = function ()
-	if H.Active() then RPF.Debounce("home", 0.1, refresh) end
+	if H.Active() then RPF.Debounce("home", 0.1, refreshWhenStill) end
 end
 
 -----------------------------------------

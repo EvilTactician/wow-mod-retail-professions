@@ -1,10 +1,10 @@
-# Retail Professions 1.24.4
+# Retail Professions 1.24.6
 
 <div align="center">
 
 ![Interface Version](https://img.shields.io/badge/Interface-30300-blue)
 ![WoW Version](https://img.shields.io/badge/WoW-3.3.5a-orange)
-[![Version](https://img.shields.io/badge/Version-1.24.4-green)](https://github.com/EvilTactician/JournalGearBIS)
+[![Version](https://img.shields.io/badge/Version-1.24.6-green)](https://github.com/EvilTactician/JournalGearBIS)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 </div>
@@ -180,9 +180,11 @@ crafting speed**, earned by skill.
   - cooldowns that are over (all transmutes on one line, since they share a timer),
   - tracked recipes you now have the materials for,
   - per profession: the next rank to train (from 25 points short of the cap, with the level the
-    trainer asks for, and where: the nearest trainer, the book and who sells it, or the quest,
+    trainer or quest asks for, the ones you can use at your level first, and where: the
+    nearest trainer, the book and who sells it, or the quest,
     the others in its tooltip; click it to flag it on your map), new recipes waiting at the
-    trainer, what to make next for skill, and herbs to mill or ore to prospect.
+    trainer (a recipe learned at the trainer drops off at once, without opening that
+    profession first), what to make next for skill, and herbs to mill or ore to prospect.
 - **What to make next** follows the leveling routes of the
   [wow-professions.com WotLK guides](https://www.wow-professions.com/wotlk-classic) (1-450) for
   Alchemy, Blacksmithing, Enchanting, Engineering, Inscription, Jewelcrafting, Leatherworking,
