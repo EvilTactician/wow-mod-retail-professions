@@ -70,6 +70,19 @@ RetailProfessions.WorldDropThreshold = 25
 RetailProfessions.SaveZoneData = 1
 
 #
+#    RetailProfessions.ReagentSources
+#        Description: Where reagents come from: the recipe pane marks each reagent as crafted,
+#                     sold, gathered or dropped, and a learned recipe lists where to get them
+#                     (the nearest vendor, the best zones to gather in, the likeliest drops).
+#                     The server reads the loot of every reagent at startup for it, which takes
+#                     a few seconds more. With 0 the pane shows reagents as before.
+#                     Needs a restart.
+#        Default:     1
+#
+
+RetailProfessions.ReagentSources = 1
+
+#
 #    RetailProfessions.Refine.Enable
 #        Description: Milling and Prospecting from the profession window. The window lists the
 #                     herbs or ore in a player's bags with what each one gives, and Mill All or

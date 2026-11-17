@@ -52,22 +52,31 @@ function R.IsOpen(kind)
 	return RPF.IsOpen() and M.skill == kind.skill and not M.linked
 end
 
-function R.SetView(code)
-	if R.view == code then return end
+-- The herb or ore to select when the view's rows are in (a reagent's source): its key.
+R.want = nil
+
+-- item: the herb or ore to land on, or nil for the first.
+function R.SetView(code, item)
+	R.want = code and item and (code .. ":" .. item) or nil
+	if R.view == code then
+		if R.want then RPF.Fire("VIEW") end
+		return
+	end
 	R.view = code
 	RPF.selected = nil
 	RPF.Fire("VIEW")
 end
 
 -- A click that opens the profession should land on this view: the window takes it when it opens.
-local pending, pendingAt
-function R.Pend(code)
-	pending, pendingAt = code, GetTime()
+local pending, pendingItem, pendingAt
+function R.Pend(code, item)
+	pending, pendingItem, pendingAt = code, item, GetTime()
 end
 
 RPF.On("SHOW", function ()
 	local code = pending and GetTime() - pendingAt < 2 and pending or nil
-	pending = nil
+	R.want = code and pendingItem and (code .. ":" .. pendingItem) or nil
+	pending, pendingItem = nil, nil
 	if R.view ~= code then
 		R.view = code
 		RPF.selected = nil

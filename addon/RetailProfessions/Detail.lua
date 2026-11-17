@@ -27,6 +27,23 @@ local function label(parent, font, r, g, b)
 	return fs
 end
 
+-- How many lines of `height` fit under a region, above the options along the pane's bottom
+-- edge (Frame.lua): what the pane lists there stops short of them, however much is above it.
+-- `most` while the pane has no place on screen yet.
+local function linesFit(region, gap, height, most)
+	local top, floor = region:GetBottom(), pane:GetBottom()
+	if not top or not floor then return most end
+	return math.max(0, math.min(most, math.floor((top - gap - floor - RPF.DetailReserve()) / height + 0.01)))
+end
+
+-- Where a reagent comes from, at a glance: a small picture after its name.
+local SOURCE_ICON = {
+	craft = GetItemIcon(6219) or "Interface\\Icons\\INV_Misc_Wrench_01", -- Arclight Spanner
+	drop = GetItemIcon(4240) or "Interface\\Icons\\INV_Misc_Bag_10",     -- Woolen Bag
+	vendor = "Interface\\Icons\\INV_Misc_Coin_01",
+}
+local BADGE = 14
+
 local function itemTooltip(owner, link)
 	if not link then return end
 	GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
@@ -184,27 +201,49 @@ for i = 1, MAX_REAGENTS do
 	slot.name:SetPoint("LEFT", slot, "RIGHT", 8, 0)
 	slot.name:SetWidth(REAGENT_TEXT_WIDTH)
 	slot.have = slot.name -- one line holds both
+	-- Where it comes from: a small picture after the name. Hovering it tells every source,
+	-- clicking it does what clicking the reagent does.
+	local badge = CreateFrame("Button", nil, pane)
+	badge:SetSize(BADGE, BADGE)
+	badge.icon = badge:CreateTexture(nil, "OVERLAY")
+	badge.icon:SetAllPoints(badge)
+	badge.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+	-- owner: the secure button over it when the click opens another profession.
+	badge:SetScript("OnEnter", function (self, owner)
+		GameTooltip:SetOwner(type(owner) == "table" and owner or self, "ANCHOR_RIGHT")
+		RPF.ReagentBadgeTooltip(GameTooltip, slot)
+		GameTooltip:Show()
+	end)
+	badge:SetScript("OnLeave", function () GameTooltip:Hide() end)
+	badge:SetScript("OnClick", function ()
+		if linkOrNothing(slot.link) then return end
+		RPF.ReagentSourceAct(slot.source, slot.itemName)
+	end)
+	badge:Hide()
+	slot.badge = badge
 	-- owner: the secure button over the slot when another profession makes the reagent.
 	slot:SetScript("OnEnter", function (self, owner)
-		itemTooltip(owner or self, self.link)
-		if self.link and (self.makes or self.other) then
-			GameTooltip:AddLine(self.other and ("Click: the recipe that makes it (" .. self.other.name .. ")")
-				or "Click: the recipe that makes it", 0.25, 1, 0.25)
+		-- From the slot itself the second argument is the client's "motion" flag, not a frame.
+		itemTooltip(type(owner) == "table" and owner or self, self.link)
+		if self.link and self.source then
+			RPF.ReagentSourceLines(GameTooltip, self.source)
 			GameTooltip:Show()
 		end
 	end)
 	slot:SetScript("OnLeave", RPF.HideItemTooltip)
-	-- As on retail: a reagent this profession makes opens its recipe. One another profession
+	-- As on retail: a reagent this profession makes opens its recipe, and a click does what its
+	-- source offers (the nearest vendor on the map, where to gather it). One another profession
 	-- makes opens that one through the secure button over the slot; this only runs in combat then.
 	slot:SetScript("OnClick", function (self)
 		if linkOrNothing(self.link) then return end
-		if self.makes then
-			RPF.SelectSpell(self.makes)
-		elseif self.other then
-			UIErrorsFrame:AddMessage("Professions can't be opened in combat.", 1, 0.1, 0.1)
-		end
+		RPF.ReagentSourceAct(self.source, self.itemName)
 	end)
-	slot.Hide2 = function (self) self:Hide(); self.name:Hide(); self.other = nil end
+	slot.Hide2 = function (self)
+		self:Hide()
+		self.name:Hide()
+		self.badge:Hide()
+		self.other, self.source, self.sources = nil, nil, nil
+	end
 	slot.Show2 = function (self) self:Show(); self.name:Show() end
 	reagentSlots[i] = slot
 end
@@ -243,7 +282,7 @@ local function otherRecipeMaking(id)
 end
 
 -- Opening another profession is a cast: a secure button over the slot, made when first needed
--- (Secure.lua loads after this file).
+-- (Secure.lua loads after this file). The lines under "Get the reagents" take one the same way.
 local function bindOther(slot)
 	local p = slot.other and RPF.Profession(slot.other.skill)
 	if p then
@@ -253,7 +292,8 @@ local function bindOther(slot)
 			b.onEnter = function (self) slot:GetScript("OnEnter")(slot, self) end
 			b.preClick = function ()
 				if linkOrNothing(slot.link) or not slot.other then return end
-				RPF.Home.Pend({ skill = slot.other.skill, spell = slot.other.spell })
+				RPF.Home.Pend({ skill = slot.other.skill, spell = slot.other.spell, code = slot.other.code,
+					item = slot.other.item })
 			end
 			slot.button = b
 		end
@@ -266,7 +306,8 @@ end
 local function drawReagents(r)
 	local shown = 0
 	-- The pane is narrower in DragonUI's window (Host.lua); the names stay inside it.
-	local nameWidth = math.min(REAGENT_TEXT_WIDTH, math.max(120, (pane:GetWidth() or 0) - 2 * PAD - 38))
+	-- The badge (where it comes from) goes after the name.
+	local nameWidth = math.min(REAGENT_TEXT_WIDTH, math.max(120, (pane:GetWidth() or 0) - 2 * PAD - 38 - BADGE - 6))
 	for i, slot in ipairs(reagentSlots) do
 		slot.name:SetWidth(nameWidth)
 		local rg = r.reagents[i]
@@ -276,7 +317,7 @@ local function drawReagents(r)
 			local link = rg.link or (info and info.link) or (rg.id and ("item:" .. rg.id))
 			slot.link = link
 			slot.makes = recipeMaking(rg.id)
-			slot.other = not slot.makes and not M.linked and otherRecipeMaking(rg.id) or nil
+			slot.craftOther = not slot.makes and not M.linked and otherRecipeMaking(rg.id) or nil
 			slot:SetItem(rg.texture or (info and info.texture) or RPF.ItemIcon(rg.id), info and info.quality)
 			local reagentName = M.ReagentName(rg) or ("Item #" .. tostring(rg.id or "?"))
 			local bags = rg.id and GetItemCount(rg.id) or 0
@@ -292,13 +333,14 @@ local function drawReagents(r)
 			text = text .. " " .. reagentName
 			if bank > 0 then text = text .. string.format("  |cff4fc3f7+%d in bank|r", bank) end
 			slot.name:SetText(text)
+			slot.itemName = reagentName
+			slot.badge:ClearAllPoints()
+			slot.badge:SetPoint("LEFT", slot.name, "LEFT", math.min(slot.name:GetStringWidth() or 0, nameWidth) + 6, 0)
 			slot:Show2()
 		else
 			slot:Hide2()
 		end
 	end
-	for _, slot in ipairs(reagentSlots) do bindOther(slot) end
-	RPF.SyncSpellButtons()
 	if shown == 0 then noReagents:Show() else noReagents:Hide() end
 	return math.max(1, shown)
 end
@@ -590,6 +632,18 @@ local function canPin(src)
 	return PIN_ALWAYS[src.kind] or (PIN_GUIDE[src.kind] and RPF.Has(RPF.HELLO_GUIDE)) or false
 end
 
+-- Flags a source on the world map and says where it is.
+local function pinSource(src)
+	local who = (src.kind == "Q" or src.kind == "R") and (src.c ~= "" and src.c or src.name) or src.name
+	RPF.ShowOnMap(src.kind, src.id, function (where, err)
+		if where then
+			RPF.Status(who .. ": " .. where .. ". Marked on your map when it's on this continent.")
+		else
+			RPF.Status("Couldn't find " .. who .. " where you can reach it.", true)
+		end
+	end)
+end
+
 -- Each line says the essentials; hovering it shows the rest (who gives a quest, what a vendor
 -- wants, where a bag comes from).
 local sourceRows = {}
@@ -606,15 +660,7 @@ for i = 1, MAX_SOURCES do
 	row.text:SetWordWrap(false)
 	row.map:SetScript("OnClick", function (self)
 		local src = self:GetParent().source
-		if not src then return end
-		local who = (src.kind == "Q" or src.kind == "R") and (src.c ~= "" and src.c or src.name) or src.name
-		RPF.ShowOnMap(src.kind, src.id, function (where, err)
-			if where then
-				RPF.Status(who .. ": " .. where .. ". Marked on your map when it's on this continent.")
-			else
-				RPF.Status("Couldn't find " .. who .. " where you can reach it.", true)
-			end
-		end)
+		if src then pinSource(src) end
 	end)
 	row:SetScript("OnEnter", function (self)
 		if self.tip then
@@ -708,6 +754,19 @@ local function sourceText(src, r)
 	elseif k == "L" then
 		local n = tonumber(src.a) or 0
 		return string.format("%sAnd %d more in %s, once it opens to you|r", DIM, n, src.name)
+	-- A reagent's (RPF.WhereToGet):
+	elseif k == "B" then
+		return string.format("%sCrafted|r  with %s", GOLD, src.name)
+	elseif k == "H" then
+		local text = string.format("%sGathered|r  %s%s", GOLD, src.name, where(src))
+		if (tonumber(src.a) or 0) > 1 then text = text .. string.format(" %s(skill %s)|r", GREY, tostring(src.a)) end
+		return text
+	elseif k == "F" then
+		return string.format("%sFished|r  in %s%s", GOLD, (src.c or "") ~= "" and src.c or src.name, chanceText(src.a))
+	elseif k == "E" then
+		return GOLD .. "Disenchanted|r  from equipment"
+	elseif k == "M" or k == "J" then
+		return string.format("%s%s|r  from %s%s", GOLD, k == "M" and "Milled" or "Prospected", src.name, chanceText(src.a))
 	end
 	return src.name
 end
@@ -717,6 +776,7 @@ local TIP_TITLE = {
 	A = "Learned automatically", T = "Trainer", N = "Taught by", G = "Learned from", V = "Vendor", D = "Drop",
 	P = "Pickpocket", K = "Skinning", X = "World drop", O = "Found in", C = "Inside", Q = "Quest", R = "Quest reward",
 	S = "Discovery", L = "Not open to you yet",
+	B = "Crafted", H = "Gathered", F = "Fished", E = "Disenchanted", M = "Milled", J = "Prospected",
 }
 
 local function sourceTip(src)
@@ -774,6 +834,14 @@ local function drawSources(r, anchor)
 	for _, row in ipairs(sourceRows) do row:Hide() end
 	recipeItemButton:Hide()
 
+	-- The lines there's room for under the title, the recipe item's included; a recipe with
+	-- many reagents leaves few, and the last one then stands for the rest.
+	local room = linesFit(sourceTitle, 6, 18, MAX_SOURCES + 1)
+	if room < 1 then
+		hideSources()
+		return
+	end
+
 	if not RPF.Has(RPF.HELLO_RECIPES) then
 		sourceNote:SetText("This realm doesn't say where recipes come from.")
 		sourceNote:Show()
@@ -791,31 +859,37 @@ local function drawSources(r, anchor)
 			return
 		end
 		local recipeItem = result.recipeItem or 0
+		local rows = result.rows
+		-- With room for one line only, the recipe item goes in its tooltip with the rest.
+		local itemText
 		if recipeItem > 0 then
 			local info = RPF.Item(recipeItem)
 			recipeItemButton.link = info and info.link or ("item:" .. recipeItem)
-			recipeItemButton.text:SetText(GOLD .. "Recipe item|r  " .. (info and info.link or ("item " .. recipeItem))
-				.. recipeItemMarket(recipeItem))
-			recipeItemButton:Show()
-		else
-			recipeItemButton.text:SetText("")
-			recipeItemButton:Show()
+			itemText = GOLD .. "Recipe item|r  " .. (info and info.link or ("item " .. recipeItem)) .. recipeItemMarket(recipeItem)
 		end
-		recipeItemButton:SetHeight(recipeItem > 0 and 16 or 1)
+		local showItem = itemText and (room >= 2 or #rows == 0)
+		recipeItemButton.text:SetText(showItem and itemText or "")
+		recipeItemButton:Show()
+		recipeItemButton:SetHeight(showItem and 16 or 1)
+		local fit = math.min(MAX_SOURCES, room - (showItem and 1 or 0))
 
 		-- More than fit: the last line sums up the rest, and its tooltip lists them.
-		local rows = result.rows
 		local n = 0
 		for i, src in ipairs(rows) do
 			n = n + 1
 			local row = sourceRows[n]
-			if n == MAX_SOURCES and #rows > MAX_SOURCES then
+			if n > fit then
+				n = n - 1
+				break
+			end
+			if n == fit and (#rows > fit or (itemText and not showItem)) then
 				local rest = {}
 				for j = i, #rows do table.insert(rest, rows[j]) end
 				row.source = nil
 				row.text:SetText(string.format("%sAnd %d more sources (hover to see them)|r", DIM, #rest))
 				row.tip = function (tip)
 					tip:SetText("More sources")
+					if itemText and not showItem then tip:AddLine(itemText, 1, 1, 1) end
 					for _, more in ipairs(rest) do tip:AddLine(sourceText(more, r), 1, 1, 1) end
 				end
 				row.map:Hide()
@@ -837,6 +911,351 @@ local function drawSources(r, anchor)
 end
 
 -----------------------------------------
+-- where the reagents come from (RPF.WhereToGet): a badge after each reagent's name, and under
+-- a recipe you know, in the room "Learn it from" would take, a line per reagent. One source
+-- each, the easiest: you craft it, a vendor sells it, you gather it, it drops, someone else's
+-- profession. The tooltip has the rest.
+
+local GATHER = { H = true, F = true, K = true, E = true, M = true, J = true }
+local GATHER_SKILL = { F = 356, K = 393, E = 333, M = 773, J = 755 }
+local GATHER_ICON = { E = "Interface\\Icons\\INV_Enchant_Disenchant" }
+local REFINE_CODE = { M = "M", J = "P" }
+
+local function gatherSkill(src)
+	return src.kind == "H" and tonumber(src.b) or GATHER_SKILL[src.kind]
+end
+
+-- By name, GetSpellInfo only answers for spells you know: the one that opens the profession,
+-- or a gathering profession's own (Find Herbs, Fishing, Skinning).
+local function knows(skill)
+	local p = skill and RPF.Profession(skill)
+	local name = p and (p.openName or p.extraName or p.localName)
+	return name and GetSpellInfo(name) ~= nil or false
+end
+
+local function gatherIcon(src)
+	if src.kind == "M" or src.kind == "J" then
+		local kind = RPF.Refine.Kind(REFINE_CODE[src.kind])
+		local icon = kind and select(3, GetSpellInfo(kind.spell))
+		if icon then return icon end
+	end
+	local p = RPF.Profession(gatherSkill(src) or 0)
+	return GATHER_ICON[src.kind] or (p and p.texture) or SOURCE_ICON.drop
+end
+
+-- "Drops from Defias Looter (level 13-14) - Westfall - 32%".
+local function dropLine(src)
+	if src.kind == "O" then
+		return string.format("Found in %s%s%s", src.name, where(src), chanceText(src.a))
+	elseif src.kind == "C" then
+		return string.format("Found inside %s%s", src.name, chanceText(src.a))
+	elseif src.kind == "X" then
+		local text = string.format("Drops from many creatures, level %s", tostring(src.b))
+		if (src.c or "") ~= "" then text = text .. ", mostly " .. (src.note == "trash" and "in " or "on ") .. src.c end
+		return text
+	end
+	return string.format("Drops from %s %s(level %s)|r%s%s", src.name, GREY, tostring(src.b), where(src), chanceText(src.a))
+end
+
+-- "prospect or mine", "Mining or Jewelcrafting".
+local function either(words)
+	if #words < 2 then return words[1] or "" end
+	return table.concat(words, ", ", 1, #words - 1) .. " or " .. words[#words]
+end
+
+local function gatherVerb(src)
+	if src.kind == "H" then
+		local skill = tonumber(src.b)
+		return skill == 182 and "pick" or skill == 186 and "mine" or "fish"
+	end
+	return ({ F = "fish", K = "skin", E = "disenchant", M = "mill", J = "prospect" })[src.kind]
+end
+
+-- A drop worth sending someone after when a profession also gives the reagent: 15%.
+local GOOD_DROP = 1500
+
+-- The one source a reagent is shown with: { icon, dim, text } and what a click does (spell: a
+-- recipe here; other: a profession to open, through a secure button; refine: Milling or
+-- Prospecting here; pin: a source to flag on the map; tell: sources to say where to gather).
+-- The easiest first: you craft it; a vendor with all you want of it; you gather it (every
+-- way you can: a gem is prospected and mined); a vendor with a few in stock; a drop, unless
+-- it's a rare one and a profession gives it; a vendor for tokens or on a holiday; someone
+-- else's profession.
+local function classify(slot, rows, waiting)
+	local function first(kinds, test)
+		for _, src in ipairs(rows or {}) do
+			if kinds[src.kind] and (not test or test(src)) then return src end
+		end
+		return nil
+	end
+	local made = slot.makes and M.bySpell[slot.makes]
+	if made and made.learned then
+		return { icon = SOURCE_ICON.craft, text = "You can craft this yourself.", spell = slot.makes }
+	elseif slot.craftOther then
+		return { icon = SOURCE_ICON.craft, text = "You can craft this yourself.", other = slot.craftOther }
+	elseif waiting then
+		return { text = DIM .. "Looking it up...|r", waiting = true }
+	elseif not rows then
+		-- The realm doesn't say: only what the recipes themselves show.
+		return made and { icon = SOURCE_ICON.craft, dim = true, text = "You haven't learned to craft this yet.", spell = slot.makes }
+			or nil
+	end
+
+	-- Every way to gather it, one per profession: yours, and the others'.
+	local mine, theirs, seen = {}, {}, {}
+	for _, src in ipairs(rows) do
+		local skill = GATHER[src.kind] and gatherSkill(src)
+		if skill and not seen[skill] then
+			seen[skill] = true
+			table.insert(knows(skill) and mine or theirs, src)
+		end
+	end
+	local function professions(list, into)
+		for _, src in ipairs(list) do
+			local p = RPF.Profession(gatherSkill(src) or 0)
+			if p then table.insert(into, p.localName) end
+		end
+		return into
+	end
+	-- After a vendor or a drop: the other ways, yours and other people's professions.
+	local function also()
+		local parts = {}
+		if #mine > 0 then
+			local verbs = {}
+			for _, src in ipairs(mine) do table.insert(verbs, gatherVerb(src)) end
+			table.insert(parts, "You can also " .. either(verbs) .. " this yourself.")
+		end
+		local names = {}
+		for _, src in ipairs(rows) do
+			if src.kind == "B" then table.insert(names, src.name) end
+		end
+		professions(theirs, names)
+		if #names > 0 then
+			table.insert(parts, "Also from someone with " .. either(names) .. " or the Auction House.")
+		end
+		return #parts > 0 and (". " .. table.concat(parts, " ")) or ""
+	end
+
+	local function vendorLine(v, extra)
+		return { icon = SOURCE_ICON.vendor, text = "Buy from " .. v.name .. where(v) .. (extra or "") .. also(), pin = v }
+	end
+	local V = { V = true }
+	local plain = first(V, function (v) return (tonumber(v.b) or 0) == 0 and (v.note or "") == "" end)
+	if plain then return vendorLine(plain) end
+	if #mine > 0 then
+		local verbs = {}
+		for _, src in ipairs(mine) do table.insert(verbs, gatherVerb(src)) end
+		local text = "You can " .. either(verbs) .. " this yourself."
+		if #theirs > 0 then text = text .. " Also from " .. either(professions(theirs, {})) .. "." end
+		local lead = mine[1]
+		local s = { icon = gatherIcon(lead), text = text, tell = mine }
+		local code = REFINE_CODE[lead.kind]
+		if code and RPF.Refine.Known(code) then
+			local skill = gatherSkill(lead)
+			-- Lands on the herb or ore that gives it.
+			if M.skill == skill and not M.linked then
+				s.refine, s.refineItem = code, lead.id
+			else
+				local p = RPF.Profession(skill)
+				s.other = { skill = skill, code = code, item = lead.id, name = p and p.localName or "" }
+			end
+		end
+		return s
+	end
+
+	local limited = first(V, function (v) return (v.note or "") == "" end)
+	if limited then return vendorLine(limited, GREY .. " (limited stock)|r") end
+
+	local by = first({ B = true })
+	local profession = made or by or #theirs > 0
+	local function dropSource(drop)
+		return { icon = SOURCE_ICON.drop, text = dropLine(drop) .. also(), pin = (drop.kind == "D" or drop.kind == "O") and drop or nil }
+	end
+	local good = first({ D = true }, function (d) return (tonumber(d.a) or 0) >= GOOD_DROP end)
+	local drop = good or (not profession and (first({ D = true }) or first({ O = true }) or first({ X = true }) or first({ C = true })))
+	if drop then return dropSource(drop) end
+
+	local special = first(V)
+	if special then return vendorLine(special, GREY .. " (" .. special.note .. ")|r") end
+
+	if made then
+		return { icon = SOURCE_ICON.craft, dim = true, text = "You haven't learned to craft this yet.", spell = slot.makes }
+	end
+	if by or #theirs > 0 then
+		local names = {}
+		for _, src in ipairs(rows) do
+			if src.kind == "B" then table.insert(names, src.name) end
+		end
+		professions(theirs, names)
+		return { icon = by and SOURCE_ICON.craft or gatherIcon(theirs[1]), dim = true,
+			text = "Get this from someone with " .. either(names) .. " or buy from the Auction House." }
+	end
+	if first({ L = true }) then return { text = "Nowhere you can reach yet; try the Auction House." } end
+	return { text = "Source unknown." }
+end
+
+-- Where to gather it, every way you can: said in the window and kept in chat.
+local function tellGather(sources, name)
+	for n, src in ipairs(sources) do
+		local zones = (src.c or "") ~= "" and src.c or nil
+		local p = RPF.Profession(gatherSkill(src) or 0)
+		local skill = p and p.localName or ""
+		local text
+		if src.kind == "H" then
+			text = string.format("%s: %s it from %s%s.", name, gatherVerb(src), src.name ~= "" and src.name or "its nodes",
+				zones and (", most of all in " .. zones) or "")
+			if (tonumber(src.a) or 0) > 1 then text = text .. string.format(" Needs %s %s.", skill, tostring(src.a)) end
+		elseif src.kind == "F" then
+			text = string.format("%s: fish for it in %s.", name, zones or src.name)
+		elseif src.kind == "K" then
+			text = string.format("%s: skin it from %s%s.", name, src.name, src.id ~= 0 and src.zone ~= "" and (" in " .. src.zone) or "")
+		elseif src.kind == "E" then
+			text = name .. ": disenchant equipment for it."
+		else
+			text = string.format("%s: %s %s for it.", name, src.kind == "M" and "mill" or "prospect", src.name)
+		end
+		if n == 1 then RPF.Status(text) end
+		RPF.Print(text)
+	end
+end
+
+function RPF.ReagentSourceAct(s, name)
+	if not s then return end
+	if s.spell then
+		RPF.SelectSpell(s.spell)
+	elseif s.refine then
+		RPF.Refine.SetView(s.refine, s.refineItem)
+	elseif s.other then
+		UIErrorsFrame:AddMessage("Professions can't be opened in combat.", 1, 0.1, 0.1)
+	elseif s.pin then
+		-- A node is an object to the map.
+		local src = s.pin
+		if canPin(src) then pinSource(src) else RPF.Status((name or "It") .. ": " .. s.text) end
+	elseif s.tell then
+		tellGather(s.tell, name or "It")
+	end
+end
+
+-- Under a reagent's own tooltip and its badge's: the source it's shown with, then (more) the
+-- badge's list of every source, and what a click does.
+function RPF.ReagentSourceLines(tip, s, more)
+	if not s or s.waiting or not s.text then return end
+	tip:AddLine(" ")
+	tip:AddLine(s.text, 1, 0.82, 0, true)
+	if more then more(tip) end
+	local hint
+	if s.spell then
+		hint = "Click: the recipe that makes it"
+	elseif s.other then
+		hint = s.other.code and ("Click: open " .. s.other.name) or ("Click: the recipe that makes it (" .. s.other.name .. ")")
+	elseif s.refine then
+		hint = "Click: the herbs or ore that give it"
+	elseif s.pin then
+		hint = canPin(s.pin) and "Click: mark it on your world map" or nil
+	elseif s.tell then
+		hint = "Click: where to get it (in chat)"
+	end
+	if hint then tip:AddLine(hint, 0.25, 1, 0.25) end
+end
+
+-- A badge's tooltip: the reagent, the line it's shown with, every source the realm knows (of
+-- the creatures that drop it, the likeliest three) and what a click does.
+function RPF.ReagentBadgeTooltip(tip, slot)
+	tip:SetText(slot.itemName or "")
+	RPF.ReagentSourceLines(tip, slot.source, function (t)
+		local drops, gap = 0, true
+		for _, src in ipairs(slot.sources or {}) do
+			if src.kind == "D" then drops = drops + 1 end
+			if src.kind ~= "D" or drops <= 3 then
+				if gap then t:AddLine(" ") gap = false end
+				t:AddLine(sourceText(src), 1, 1, 1)
+			end
+		end
+	end)
+end
+
+-- One line under the reagents of a recipe you know, pointing at the badges.
+local getHint = label(pane, "GameFontNormalSmall")
+getHint:SetText("For more details, hover the small icons.")
+getHint:Hide()
+
+local function drawHint(r, anchor)
+	local show = r.learned and not r.refine and not M.linked and #r.reagents > 0 and RPF.Has(RPF.HELLO_REAGENTS)
+	if not show then
+		getHint:Hide()
+		return anchor
+	end
+	getHint:ClearAllPoints()
+	getHint:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -8)
+	getHint:Show()
+	return getHint
+end
+
+local getToken = 0
+
+local function hideBadges()
+	getToken = getToken + 1
+	for _, slot in ipairs(reagentSlots) do
+		slot.badge.other = nil
+		slot.badge:Hide()
+		bindOther(slot.badge)
+	end
+end
+
+local function hideGet()
+	getHint:Hide()
+	hideBadges()
+end
+
+-- The badges, as each reagent's sources come in (the hint line is drawHint's).
+local function drawGet(r)
+	hideBadges()
+	local mine = getToken
+	local count = (r.refine or M.linked) and 0 or math.min(#r.reagents, MAX_REAGENTS)
+
+	local function apply(i, rows, waiting)
+		local slot = reagentSlots[i]
+		local s = classify(slot, rows, waiting)
+		slot.source, slot.sources = s, rows
+		slot.other = s and s.other or nil
+		bindOther(slot)
+		local badge = slot.badge
+		badge.link, badge.other = slot.link, slot.other
+		if s and s.icon then
+			badge.icon:SetTexture(s.icon)
+			badge.icon:SetDesaturated(s.dim and true or false)
+			badge.icon:SetAlpha(s.dim and 0.7 or 1)
+			badge:Show()
+		else
+			badge.other = nil
+			badge:Hide()
+		end
+		bindOther(badge)
+	end
+
+	for i = 1, #reagentSlots do
+		local slot = reagentSlots[i]
+		slot.other = nil
+		if i > count then
+			slot.source, slot.sources = nil, nil
+			bindOther(slot)
+		end
+	end
+	for i = 1, count do
+		local rg = r.reagents[i]
+		apply(i, nil, RPF.Has(RPF.HELLO_REAGENTS) and rg.id ~= nil)
+		if rg.id then
+			RPF.WhereToGet(rg.id, function (result)
+				if mine ~= getToken or RPF.selected ~= r then return end
+				apply(i, result and result.rows or (RPF.Has(RPF.HELLO_REAGENTS) and {} or nil), false)
+				RPF.SyncSpellButtons()
+			end)
+		end
+	end
+	RPF.SyncSpellButtons()
+end
+
+-----------------------------------------
 
 local parts = { icon, nameText, star, subText, description, reagentTitle, watermark }
 
@@ -845,6 +1264,7 @@ local function showParts(on)
 	if not on then
 		noReagents:Hide()
 		for _, slot in ipairs(reagentSlots) do slot:Hide2() bindOther(slot) end
+		hideGet()
 		RPF.SyncSpellButtons()
 		shopRow:Hide()
 		hideSources()
@@ -854,9 +1274,13 @@ local function showParts(on)
 	end
 end
 
+local settling = false -- drawing again to measure, not for a change
+local lastDrawn
+
 local function draw(r)
 	gearStrip:SetSkill(not M.linked and M.skill or nil)
 	if not r then
+		lastDrawn = nil
 		showParts(false)
 		empty:Show()
 		return
@@ -942,14 +1366,32 @@ local function draw(r)
 	reagentAnchor:SetPoint("TOPLEFT", description, "BOTTOMLEFT", 0, (r.description or "") ~= "" and -12 or 0)
 
 	local rows = drawReagents(r)
-	local below = drawShopping(r, #r.reagents > 0 and reagentSlots[rows] or noReagents)
+	local below = drawHint(r, #r.reagents > 0 and reagentSlots[rows] or noReagents)
+	below = drawShopping(r, below)
 	below = drawPrices(r, below)
 	if r.refine then drawResults(r, below) else hideResults() end
-	if r.learned then
+	-- Where to learn it fills the room that's left, and how many lines fit is measured: what was
+	-- placed just now (after another recipe, or another profession's) only has its place on
+	-- screen a moment later. A new recipe's list waits for that rather than show too many.
+	local fresh = r ~= lastDrawn
+	lastDrawn = r
+	if r.learned or (fresh and not settling) then
 		hideSources()
 	else
 		drawSources(r, below)
 	end
+	drawGet(r)
+	if not settling then
+		RPF.Debounce("detail-fit", 0.05, function () RPF.DetailRefit(r, true) end)
+	end
+end
+
+function RPF.DetailRefit(r, again)
+	if RPF.selected ~= r or not pane:IsVisible() then return end
+	settling = true
+	draw(r)
+	settling = false
+	if again then RPF.After(0.3, function () RPF.DetailRefit(r, false) end) end
 end
 
 shopButton:SetScript("OnClick", function ()
@@ -976,7 +1418,10 @@ RPF.On("QUANTITY", function ()
 	local r = RPF.selected
 	if r and RPF.IsOpen() then draw(r) end
 end)
-RPF.On("HIDDEN", function () whereToken = whereToken + 1 end)
+RPF.On("HIDDEN", function ()
+	whereToken = whereToken + 1
+	getToken = getToken + 1
+end)
 
 -- A craft made a second batch or gave reagents back: say so in the window, or in chat when
 -- it's closed (a craft from a macro). Both can come from one craft; the line keeps both.

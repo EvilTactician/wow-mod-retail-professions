@@ -599,7 +599,9 @@ end
 
 -- In DragonUI's window (Host.lua) the card is its own, narrower one: no card art of ours, and the
 -- reagent bank options go on a row above Track Recipe, the feedback line over them.
+local hostLayout = false
 function RPF.HostLayout(on)
+	hostLayout = on and true or false
 	if right.SetCardArtShown then right:SetCardArtShown(not on) end
 	bankCheck:ClearAllPoints()
 	status:ClearAllPoints()
@@ -611,6 +613,12 @@ function RPF.HostLayout(on)
 		status:SetPoint("BOTTOMLEFT", right, "BOTTOMLEFT", 12, 32)
 	end
 	status:SetPoint("RIGHT", right, "RIGHT", -110, 0)
+end
+
+-- How much of the recipe pane's bottom those options and the feedback line take: what the
+-- pane lists (where to learn a recipe, where its reagents come from) stops above it.
+function RPF.DetailReserve()
+	return hostLayout and 72 or 50
 end
 
 local function getQuantity()
@@ -1015,6 +1023,10 @@ end)
 -- selection and rebuilding
 
 function RPF.Select(r, reveal)
+	if r and r.spell and not r.refine and M.skill and not M.linked then
+		RetailProfessionsCharDB.lastRecipe = RetailProfessionsCharDB.lastRecipe or {}
+		RetailProfessionsCharDB.lastRecipe[M.skill] = r.spell
+	end
 	-- Another recipe starts at one: only the player (the amount, Create All) makes it more.
 	if keyOf(r) ~= keyOf(RPF.selected) then
 		countdown = nil
@@ -1133,9 +1145,25 @@ Rebuild = function (viewOnly)
 	-- Keep the selection when the recipe still exists (it's a new table after a scan).
 	local selected
 	if refine then
-		selected = RPF.selected and RPF.selected.refine == refine.code and RPF.Refine.ByKey(RPF.selected.key) or nil
+		-- A herb or ore asked for (a reagent's source) once its rows are in.
+		local want = RPF.Refine.want and RPF.Refine.ByKey(RPF.Refine.want)
+		if want then
+			RPF.Refine.want = nil
+			selected = want
+		else
+			selected = RPF.selected and RPF.selected.refine == refine.code and RPF.Refine.ByKey(RPF.selected.key) or nil
+		end
 	else
 		selected = RPF.selected and RPF.selected.spell and M.bySpell[RPF.selected.spell]
+	end
+	-- Back in a profession: the recipe you had last in it. Anything that opens one on a recipe
+	-- (the Home page, a reagent) selects that after this.
+	if not selected and not refine and M.skill and not M.linked then
+		-- Only while it's in the list (not hidden by a filter, or unlearned ones hidden).
+		local last = (RetailProfessionsCharDB.lastRecipe or {})[M.skill]
+		for _, row in ipairs(last and rows or {}) do
+			if row.recipe and row.recipe.spell == last then selected = row.recipe break end
+		end
 	end
 	if not selected and not refine and RPF.selected and RPF.selected.learned then
 		for _, r in ipairs(M.recipes) do if r.name == RPF.selected.name then selected = r break end end

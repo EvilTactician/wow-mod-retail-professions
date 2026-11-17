@@ -62,6 +62,7 @@ namespace RetailProfessions
         HELLO_GEAR_TYPED  = 0x80, // each accessory slot takes one kind (GC's kind is the slot); Cooking 3 slots, Fishing a lure slot
         HELLO_GEAR_ACCOUNT = 0x100, // this character's slots are the account's
         HELLO_RANKS    = 0x200, // K says where a profession's rank is taught, gathering and Fishing's too
+        HELLO_REAGENTS = 0x400, // I says where a reagent comes from
     };
 
     // What a craft of a recipe can get on top (the perks field of an L row).
@@ -97,6 +98,7 @@ namespace RetailProfessions
         uint32 maxSourcesPerKind = 6;
         uint32 worldDropThreshold = 25;  // more droppers than this through a shared loot table = world drop
         bool saveZoneData = true;
+        bool reagentSources = true;     // where reagents come from (I): more loot read at startup
         bool refine = true;             // Milling and Prospecting from the window
         uint32 refineCastTime = 0;      // ms per cast; 0 = the spell's own cast time
         bool perks = true;              // Multicraft, Resourcefulness and crafting speed
@@ -151,6 +153,7 @@ namespace RetailProfessions
         void HandleList(Player* player, std::string const& req, std::vector<std::string_view> const& args);
         void HandleWhere(Player* player, std::string const& req, std::vector<std::string_view> const& args);
         void HandleRank(Player* player, std::string const& req, std::vector<std::string_view> const& args);
+        void HandleItem(Player* player, std::string const& req, std::vector<std::string_view> const& args);
         void HandleMapPin(Player* player, std::string const& req, std::vector<std::string_view> const& args);
     }
 
