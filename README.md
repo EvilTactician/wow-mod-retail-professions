@@ -1,4 +1,13 @@
-# Retail Professions
+# Retail Professions 1.24.3
+
+<div align="center">
+
+![Interface Version](https://img.shields.io/badge/Interface-30300-blue)
+![WoW Version](https://img.shields.io/badge/WoW-3.3.5a-orange)
+[![Version](https://img.shields.io/badge/Version-1.24.3-green)](https://github.com/EvilTactician/JournalGearBIS)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+
+</div>
 
 An [AzerothCore](https://www.azerothcore.org/) (WotLK 3.3.5a) module and addon that replace the
 old trade skill window with a **retail-style profession window**, in the spirit of WoW Forever's:
