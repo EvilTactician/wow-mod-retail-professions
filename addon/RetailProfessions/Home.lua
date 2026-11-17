@@ -1559,8 +1559,17 @@ H.Refresh = refresh
 H.rows = { todo = todoRows, crafts = craftButtons, profs = profRows, cards = cardRows }
 H.scrolls = { todo = todoScroll, crafts = craftScroll, profs = profScroll, cards = equipScroll }
 
+-- Not while the window is dragged: a redraw then is what made dragging stutter.
+local function refreshWhenStill()
+	if RPF.Dragging() then
+		RPF.Debounce("home", 0.2, refreshWhenStill)
+	else
+		refresh()
+	end
+end
+
 refreshSoon = function ()
-	if H.Active() then RPF.Debounce("home", 0.1, refresh) end
+	if H.Active() then RPF.Debounce("home", 0.1, refreshWhenStill) end
 end
 
 -----------------------------------------
