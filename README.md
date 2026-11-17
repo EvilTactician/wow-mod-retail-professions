@@ -48,21 +48,19 @@ crafting speed**, earned by skill.
   it, a vendor with all you want of it, you gather it (every way you can: "You can prospect or
   mine this yourself."), a vendor with limited stock, a drop, someone else's profession. A rare
   drop (under 15%) doesn't stand in for a profession that gives the reagent: ore says Mining,
-  not the one creature that carries some. Clicking the reagent does
-  what its source offers: the recipe, the nearest vendor or the likeliest creature flagged on
-  your map, the best zones to gather it in.
-- For a recipe you know, in the room "where to learn it" would take: **Get the reagents for
-  this recipe from**, a line per reagent ("You can craft this yourself.", "Buy from Wrahk -
-  Thunder Bluff", "Drops from Defias Looter (level 13-14) - Westfall - 32%", "Get this from
-  someone with Mining or buy from the Auction House."). Hover a line for every source the
-  realm knows, with the three likeliest creatures for a drop, by drop chance, among those your
-  faction can reach; click it for the same as the reagent. Vendors are the nearest to where
-  you stand, gathering zones leave out the other faction's own, and all of it follows your
-  progression as recipe sources do. A reagent the realm has no source for says "Source
-  unknown."
+  not the one creature that carries some. After a vendor or a drop come the other ways ("Buy
+  from Lhara - Orgrimmar. Also from someone with Skinning or the Auction House.").
+- **Hover the small picture** for the reagent's line and every source the realm knows: the
+  vendors nearest to where you stand, the best zones to gather it in (leaving out the other
+  faction's own), the three likeliest creatures for a drop among those your faction can reach,
+  all following your progression as recipe sources do. A reagent the realm has no source for
+  says "Source unknown." The reagent's own tooltip carries the same line. Clicking the picture
+  or the reagent does what its source offers: the recipe (in another of your professions too),
+  the nearest vendor or the likeliest creature flagged on your map, the best zones to gather it
+  in. A recipe you know says so under its reagents: "For more details, hover the small icons."
 - Nothing in the recipe pane runs over the options along its bottom edge: where to learn a
-  recipe and where its reagents come from show the lines there's room for, and the last one
-  then stands for the rest ("And 5 more sources (hover to see them)").
+  recipe shows the lines there's room for, and the last one then stands for the rest ("And 5
+  more sources (hover to see them)").
 - **Track Recipe**, and under the recipe **Create All [n]**, the amount and **Create**. The amount
   is 1 for every recipe you pick; only you change it (or Create All). For
   enchants, an **Enchant** slot: drop the item on it once and every cast goes straight onto that

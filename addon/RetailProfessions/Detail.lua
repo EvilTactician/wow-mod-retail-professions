@@ -201,10 +201,26 @@ for i = 1, MAX_REAGENTS do
 	slot.name:SetPoint("LEFT", slot, "RIGHT", 8, 0)
 	slot.name:SetWidth(REAGENT_TEXT_WIDTH)
 	slot.have = slot.name -- one line holds both
-	slot.badge = pane:CreateTexture(nil, "OVERLAY")
-	slot.badge:SetSize(BADGE, BADGE)
-	slot.badge:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-	slot.badge:Hide()
+	-- Where it comes from: a small picture after the name. Hovering it tells every source,
+	-- clicking it does what clicking the reagent does.
+	local badge = CreateFrame("Button", nil, pane)
+	badge:SetSize(BADGE, BADGE)
+	badge.icon = badge:CreateTexture(nil, "OVERLAY")
+	badge.icon:SetAllPoints(badge)
+	badge.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+	-- owner: the secure button over it when the click opens another profession.
+	badge:SetScript("OnEnter", function (self, owner)
+		GameTooltip:SetOwner(type(owner) == "table" and owner or self, "ANCHOR_RIGHT")
+		RPF.ReagentBadgeTooltip(GameTooltip, slot)
+		GameTooltip:Show()
+	end)
+	badge:SetScript("OnLeave", function () GameTooltip:Hide() end)
+	badge:SetScript("OnClick", function ()
+		if linkOrNothing(slot.link) then return end
+		RPF.ReagentSourceAct(slot.source, slot.itemName)
+	end)
+	badge:Hide()
+	slot.badge = badge
 	-- owner: the secure button over the slot when another profession makes the reagent.
 	slot:SetScript("OnEnter", function (self, owner)
 		-- From the slot itself the second argument is the client's "motion" flag, not a frame.
@@ -984,13 +1000,6 @@ local function classify(slot, rows, waiting)
 			or nil
 	end
 
-	local function vendorLine(v, extra)
-		return { icon = SOURCE_ICON.vendor, text = "Buy from " .. v.name .. where(v) .. (extra or ""), pin = v }
-	end
-	local V = { V = true }
-	local plain = first(V, function (v) return (tonumber(v.b) or 0) == 0 and (v.note or "") == "" end)
-	if plain then return vendorLine(plain) end
-
 	-- Every way to gather it, one per profession: yours, and the others'.
 	local mine, theirs, seen = {}, {}, {}
 	for _, src in ipairs(rows) do
@@ -1007,6 +1016,31 @@ local function classify(slot, rows, waiting)
 		end
 		return into
 	end
+	-- After a vendor or a drop: the other ways, yours and other people's professions.
+	local function also()
+		local parts = {}
+		if #mine > 0 then
+			local verbs = {}
+			for _, src in ipairs(mine) do table.insert(verbs, gatherVerb(src)) end
+			table.insert(parts, "You can also " .. either(verbs) .. " this yourself.")
+		end
+		local names = {}
+		for _, src in ipairs(rows) do
+			if src.kind == "B" then table.insert(names, src.name) end
+		end
+		professions(theirs, names)
+		if #names > 0 then
+			table.insert(parts, "Also from someone with " .. either(names) .. " or the Auction House.")
+		end
+		return #parts > 0 and (". " .. table.concat(parts, " ")) or ""
+	end
+
+	local function vendorLine(v, extra)
+		return { icon = SOURCE_ICON.vendor, text = "Buy from " .. v.name .. where(v) .. (extra or "") .. also(), pin = v }
+	end
+	local V = { V = true }
+	local plain = first(V, function (v) return (tonumber(v.b) or 0) == 0 and (v.note or "") == "" end)
+	if plain then return vendorLine(plain) end
 	if #mine > 0 then
 		local verbs = {}
 		for _, src in ipairs(mine) do table.insert(verbs, gatherVerb(src)) end
@@ -1033,7 +1067,7 @@ local function classify(slot, rows, waiting)
 	local by = first({ B = true })
 	local profession = made or by or #theirs > 0
 	local function dropSource(drop)
-		return { icon = SOURCE_ICON.drop, text = dropLine(drop), pin = (drop.kind == "D" or drop.kind == "O") and drop or nil }
+		return { icon = SOURCE_ICON.drop, text = dropLine(drop) .. also(), pin = (drop.kind == "D" or drop.kind == "O") and drop or nil }
 	end
 	local good = first({ D = true }, function (d) return (tonumber(d.a) or 0) >= GOOD_DROP end)
 	local drop = good or (not profession and (first({ D = true }) or first({ O = true }) or first({ X = true }) or first({ C = true })))
@@ -1100,11 +1134,13 @@ function RPF.ReagentSourceAct(s, name)
 	end
 end
 
--- Under a reagent's own tooltip: the source it's shown with, and what a click does.
-function RPF.ReagentSourceLines(tip, s)
+-- Under a reagent's own tooltip and its badge's: the source it's shown with, then (more) the
+-- badge's list of every source, and what a click does.
+function RPF.ReagentSourceLines(tip, s, more)
 	if not s or s.waiting or not s.text then return end
 	tip:AddLine(" ")
 	tip:AddLine(s.text, 1, 0.82, 0, true)
+	if more then more(tip) end
 	local hint
 	if s.spell then
 		hint = "Click: the recipe that makes it"
@@ -1120,82 +1156,56 @@ function RPF.ReagentSourceLines(tip, s)
 	if hint then tip:AddLine(hint, 0.25, 1, 0.25) end
 end
 
-local getTitle = label(pane, "GameFontNormalSmall")
-getTitle:SetText("Get the reagents for this recipe from:")
-
-local getRows = {}
-for i = 1, MAX_REAGENTS do
-	local row = CreateFrame("Button", nil, pane)
-	row:SetHeight(18)
-	row:SetPoint("TOPLEFT", getTitle, "BOTTOMLEFT", 0, -6 - (i - 1) * 18)
-	row:SetPoint("RIGHT", pane, "RIGHT", -PAD, 0)
-	row.icon = row:CreateTexture(nil, "ARTWORK")
-	row.icon:SetSize(BADGE, BADGE)
-	row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
-	row.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-	row.text = label(row, "GameFontHighlightSmall")
-	row.text:SetPoint("LEFT", row.icon, "RIGHT", 6, 0)
-	row.text:SetPoint("RIGHT", row, "RIGHT", 0, 0)
-	row.text:SetWordWrap(false)
-	local hl = row:CreateTexture(nil, "HIGHLIGHT")
-	hl:SetAllPoints(row)
-	hl:SetTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
-	hl:SetBlendMode("ADD")
-	hl:SetAlpha(0.4)
-	-- owner: the secure button over the line when the click opens another profession.
-	row:SetScript("OnEnter", function (self, owner)
-		GameTooltip:SetOwner(type(owner) == "table" and owner or self, "ANCHOR_RIGHT")
-		if self.tip then
-			self.tip(GameTooltip)
-		else
-			GameTooltip:SetText(self.itemName or "")
-			-- Every source the realm knows, the one on the line included.
-			-- Of the creatures that drop it, the likeliest three.
-			local drops = 0
-			for _, src in ipairs(self.sources or {}) do
-				if src.kind == "D" then drops = drops + 1 end
-				if src.kind ~= "D" or drops <= 3 then GameTooltip:AddLine(sourceText(src), 1, 1, 1) end
+-- A badge's tooltip: the reagent, the line it's shown with, every source the realm knows (of
+-- the creatures that drop it, the likeliest three) and what a click does.
+function RPF.ReagentBadgeTooltip(tip, slot)
+	tip:SetText(slot.itemName or "")
+	RPF.ReagentSourceLines(tip, slot.source, function (t)
+		local drops, gap = 0, true
+		for _, src in ipairs(slot.sources or {}) do
+			if src.kind == "D" then drops = drops + 1 end
+			if src.kind ~= "D" or drops <= 3 then
+				if gap then t:AddLine(" ") gap = false end
+				t:AddLine(sourceText(src), 1, 1, 1)
 			end
-			RPF.ReagentSourceLines(GameTooltip, self.source)
 		end
-		GameTooltip:Show()
 	end)
-	row:SetScript("OnLeave", function () GameTooltip:Hide() end)
-	row:SetScript("OnClick", function (self)
-		if linkOrNothing(self.link) then return end
-		RPF.ReagentSourceAct(self.source, self.itemName)
-	end)
-	getRows[i] = row
+end
+
+-- One line under the reagents of a recipe you know, pointing at the badges.
+local getHint = label(pane, "GameFontNormalSmall")
+getHint:SetText("For more details, hover the small icons.")
+getHint:Hide()
+
+local function drawHint(r, anchor)
+	local show = r.learned and not r.refine and not M.linked and #r.reagents > 0 and RPF.Has(RPF.HELLO_REAGENTS)
+	if not show then
+		getHint:Hide()
+		return anchor
+	end
+	getHint:ClearAllPoints()
+	getHint:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -8)
+	getHint:Show()
+	return getHint
 end
 
 local getToken = 0
 
 local function hideGet()
 	getToken = getToken + 1
-	getTitle:Hide()
-	for _, row in ipairs(getRows) do
-		row.other = nil
-		bindOther(row)
-		row:Hide()
+	getHint:Hide()
+	for _, slot in ipairs(reagentSlots) do
+		slot.badge.other = nil
+		slot.badge:Hide()
+		bindOther(slot.badge)
 	end
 end
 
--- The badges for every recipe; the lines (under `anchor`) for one you know, as many as fit.
-local function drawGet(r, anchor)
+-- The badges, as each reagent's sources come in.
+local function drawGet(r)
 	hideGet()
 	local mine = getToken
 	local count = (r.refine or M.linked) and 0 or math.min(#r.reagents, MAX_REAGENTS)
-
-	local fit = 0
-	if count > 0 and r.learned and RPF.Has(RPF.HELLO_REAGENTS) then
-		getTitle:ClearAllPoints()
-		getTitle:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -12)
-		getTitle:Show()
-		fit = linesFit(getTitle, 6, 18, MAX_REAGENTS)
-		if fit < 1 then getTitle:Hide() end
-	end
-	-- More reagents than lines: the last line stands for the rest.
-	local lines = count <= fit and count or math.max(0, fit - 1)
 
 	local function apply(i, rows, waiting)
 		local slot = reagentSlots[i]
@@ -1203,24 +1213,18 @@ local function drawGet(r, anchor)
 		slot.source, slot.sources = s, rows
 		slot.other = s and s.other or nil
 		bindOther(slot)
+		local badge = slot.badge
+		badge.link, badge.other = slot.link, slot.other
 		if s and s.icon then
-			slot.badge:SetTexture(s.icon)
-			slot.badge:SetDesaturated(s.dim and true or false)
-			slot.badge:SetAlpha(s.dim and 0.7 or 1)
-			slot.badge:Show()
+			badge.icon:SetTexture(s.icon)
+			badge.icon:SetDesaturated(s.dim and true or false)
+			badge.icon:SetAlpha(s.dim and 0.7 or 1)
+			badge:Show()
 		else
-			slot.badge:Hide()
+			badge.other = nil
+			badge:Hide()
 		end
-		local row = i <= lines and getRows[i]
-		if row then
-			row.tip = nil
-			row.source, row.sources, row.link, row.itemName = s, rows, slot.link, slot.itemName
-			row.icon:SetTexture(slot.icon:GetTexture())
-			row.text:SetText(s and s.text or "")
-			row.other = s and s.other or nil
-			bindOther(row)
-			row:Show()
-		end
+		bindOther(badge)
 	end
 
 	for i = 1, #reagentSlots do
@@ -1228,7 +1232,6 @@ local function drawGet(r, anchor)
 		slot.other = nil
 		if i > count then
 			slot.source, slot.sources = nil, nil
-			slot.badge:Hide()
 			bindOther(slot)
 		end
 	end
@@ -1242,22 +1245,6 @@ local function drawGet(r, anchor)
 				RPF.SyncSpellButtons()
 			end)
 		end
-	end
-
-	if fit >= 1 and count > lines then
-		local row = getRows[lines + 1]
-		row.source, row.sources, row.link, row.other = nil, nil, nil, nil
-		row.icon:SetTexture(nil)
-		row.text:SetText(string.format("%sAnd %d more reagents (hover to see them)|r", DIM, count - lines))
-		row.tip = function (tip)
-			tip:SetText("More reagents")
-			for i = lines + 1, count do
-				local slot = reagentSlots[i]
-				tip:AddLine((slot.itemName or "") .. ": |cffffffff" .. (slot.source and slot.source.text or "") .. "|r", 1, 0.82, 0, true)
-			end
-		end
-		bindOther(row)
-		row:Show()
 	end
 	RPF.SyncSpellButtons()
 end
@@ -1282,10 +1269,12 @@ local function showParts(on)
 end
 
 local settling = false -- drawing again to measure, not for a change
+local lastDrawn
 
 local function draw(r)
 	gearStrip:SetSkill(not M.linked and M.skill or nil)
 	if not r then
+		lastDrawn = nil
 		showParts(false)
 		empty:Show()
 		return
@@ -1371,18 +1360,21 @@ local function draw(r)
 	reagentAnchor:SetPoint("TOPLEFT", description, "BOTTOMLEFT", 0, (r.description or "") ~= "" and -12 or 0)
 
 	local rows = drawReagents(r)
-	local below = drawShopping(r, #r.reagents > 0 and reagentSlots[rows] or noReagents)
+	local below = drawHint(r, #r.reagents > 0 and reagentSlots[rows] or noReagents)
+	below = drawShopping(r, below)
 	below = drawPrices(r, below)
 	if r.refine then drawResults(r, below) else hideResults() end
-	-- One or the other in the room that's left: where to learn it, or where its reagents come from.
-	if r.learned then
+	-- Where to learn it fills the room that's left, and how many lines fit is measured: what was
+	-- placed just now (after another recipe, or another profession's) only has its place on
+	-- screen a moment later. A new recipe's list waits for that rather than show too many.
+	local fresh = r ~= lastDrawn
+	lastDrawn = r
+	if r.learned or (fresh and not settling) then
 		hideSources()
 	else
 		drawSources(r, below)
 	end
-	drawGet(r, below)
-	-- How many lines fit is measured, and what was placed just now (after another recipe, or
-	-- another profession's) only has its place on screen a moment later: once more then.
+	drawGet(r)
 	if not settling then
 		RPF.Debounce("detail-fit", 0.05, function () RPF.DetailRefit(r, true) end)
 	end
