@@ -1,10 +1,10 @@
-# Retail Professions 1.24.3
+# Retail Professions 1.24.4
 
 <div align="center">
 
 ![Interface Version](https://img.shields.io/badge/Interface-30300-blue)
 ![WoW Version](https://img.shields.io/badge/WoW-3.3.5a-orange)
-[![Version](https://img.shields.io/badge/Version-1.24.3-green)](https://github.com/EvilTactician/JournalGearBIS)
+[![Version](https://img.shields.io/badge/Version-1.24.4-green)](https://github.com/EvilTactician/JournalGearBIS)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 </div>
@@ -175,6 +175,8 @@ crafting speed**, earned by skill.
 - **Training**: your professions with their skill bars down the left (scrolling when you know
   more than fit; Herbalism, Skinning and Fishing too), and **Next steps** beside
   them, most urgent first:
+  - the next rank to train, for every profession at or near its cap, gathering ones included
+    (at the cap nothing else gives a skill point),
   - cooldowns that are over (all transmutes on one line, since they share a timer),
   - tracked recipes you now have the materials for,
   - per profession: the next rank to train (from 25 points short of the cap, with the level the

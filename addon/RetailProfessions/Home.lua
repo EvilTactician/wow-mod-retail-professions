@@ -630,7 +630,7 @@ local function todoFor(add, known)
 			sub = string.format("At a %s trainer. You're at %d/%d.", p.localName, known.baseRank, maxRank)
 		end
 		add({ icon = p.texture, text = string.format("Train %s %s", RPF.RankTitle(nextCap), p.localName), sub = sub,
-			where = where, action = first and first.pin and { pin = first.pin } or { skill = skill } })
+			where = where, action = first and first.pin and { pin = first.pin } or { skill = skill }, rank = true })
 	end
 	-- Herbalism, Skinning and Fishing: no window, so no recipes; only their next rank.
 	if not p.open then return end
@@ -735,7 +735,11 @@ local function todo(profs, column)
 	for _, known in ipairs(column or {}) do
 		if not (known.profession.open or known.profession.archaeology) then todoFor(add, known) end
 	end
-	return items
+	-- The next ranks first: at the cap, nothing else in that profession gives a skill point.
+	local ordered = {}
+	for _, item in ipairs(items) do if item.rank then table.insert(ordered, item) end end
+	for _, item in ipairs(items) do if not item.rank then table.insert(ordered, item) end end
+	return ordered
 end
 
 -----------------------------------------
@@ -866,8 +870,20 @@ end
 -- How many rows a list shows: as many as its scroll frame has room for (DragonUI's window is
 -- taller than ours, and the list runs to its bottom), never fewer than `minimum`. Rows are made
 -- as the pane grows, but not in combat: their secure buttons can't be shown then.
+-- A list's height from where it sits in its pane: FauxScrollFrame_Update hides the scroll frame
+-- while everything fits, and a hidden frame measures 0, so the next, longer list was cut to the
+-- minimum with room to spare (and the lines past it out of sight).
+local function viewHeight(scroll)
+	local parent = scroll:GetParent()
+	local height = parent and parent:GetHeight() or 0
+	local _, _, _, _, top = scroll:GetPoint(1)
+	local _, _, _, _, bottom = scroll:GetPoint(2)
+	if height > 0 and top and bottom then return height + top - bottom end
+	return scroll:GetHeight() or 0
+end
+
 local function fitRows(scroll, rows, minimum, height, make)
-	local fit = math.max(minimum, math.floor((scroll:GetHeight() or 0) / height))
+	local fit = math.max(minimum, math.floor(viewHeight(scroll) / height))
 	if not RPF.InCombat() then
 		for i = #rows + 1, fit do rows[i] = make(i) end
 	end
