@@ -251,7 +251,7 @@ crafting speed**, earned by skill.
 - At a profession trainer, the recipe you picked stays picked when you skill up (the stock window
   jumps back to the first one you can learn).
 - The windows are stock Blizzard frames (dialog frame, buttons, checkboxes, scroll bars). With
-  [DragonUI](https://github.com/NeticSoul/DragonUI) installed they wear DragonUI's retail skin:
+  [DragonUI](https://github.com/EvilTactician/wow-addon-DragonUI) installed they wear DragonUI's retail skin:
   the metal frame with the round portrait, red buttons and gold category bars. The profession
   window goes further when DragonUI has its own professions window: it takes that window's art,
   so it looks like DragonUI's professions overview (the profession's coloured skill bar, the
@@ -316,7 +316,7 @@ crafting speed**, earned by skill.
 
 ## Individual progression
 
-With [mod-individual-progression](https://github.com/ZhengPeiRu21/mod-individual-progression):
+With [mod-individual-progression](https://github.com/Grimfeather/mod-individual-progression):
 - Unlearned recipes are listed up to skill **300** before Outland opens for the player and
   **375** before Northrend, by skill tier and never by profession.
 - Trainers, vendors and drops on a continent (or in a dungeon of an expansion) the player hasn't
@@ -391,12 +391,14 @@ says there are no auction prices on the realm.
 
 ## Requirements
 
-- An [AzerothCore](https://github.com/azerothcore/azerothcore-wotlk) WotLK (master) server.
+- An [AzerothCore](https://github.com/azerothcore/azerothcore-wotlk) WotLK (master) server, or
+  [Grimfeather's fork](https://github.com/Grimfeather/azerothcore-wotlk) (the playerbots fork this
+  is tested on).
 - A WoW 3.3.5a (12340) client with the `RetailProfessions` addon installed.
-- Optional: [mod-individual-progression](https://github.com/ZhengPeiRu21/mod-individual-progression)
+- Optional: [mod-individual-progression](https://github.com/Grimfeather/mod-individual-progression)
   (era skill caps and locked continents), [mod-retail-ah](https://github.com/buildthehomelab/wow-mod-retail-ah)
   (craft-for-profit prices), [mod-reagent-bank-account](https://github.com/buildthehomelab/mod-reagent-bank-account)
-  with its ReagentBankUI, and [DragonUI](https://github.com/NeticSoul/DragonUI) (skin).
+  with its ReagentBankUI, and [DragonUI](https://github.com/EvilTactician/wow-addon-DragonUI) (skin).
 
 ## Install
 
@@ -461,7 +463,7 @@ crafting perks, milling (its tab, Mill All, Stop, the reagent bank) and the clas
 
 ## Credits
 
-Author: [buildthehomelab](https://github.com/buildthehomelab)
+Original author: [buildthehomelab](https://github.com/buildthehomelab)
 
 ## License
 
