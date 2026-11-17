@@ -292,7 +292,8 @@ local function bindOther(slot)
 			b.onEnter = function (self) slot:GetScript("OnEnter")(slot, self) end
 			b.preClick = function ()
 				if linkOrNothing(slot.link) or not slot.other then return end
-				RPF.Home.Pend({ skill = slot.other.skill, spell = slot.other.spell, code = slot.other.code })
+				RPF.Home.Pend({ skill = slot.other.skill, spell = slot.other.spell, code = slot.other.code,
+					item = slot.other.item })
 			end
 			slot.button = b
 		end
@@ -1051,11 +1052,12 @@ local function classify(slot, rows, waiting)
 		local code = REFINE_CODE[lead.kind]
 		if code and RPF.Refine.Known(code) then
 			local skill = gatherSkill(lead)
+			-- Lands on the herb or ore that gives it.
 			if M.skill == skill and not M.linked then
-				s.refine = code
+				s.refine, s.refineItem = code, lead.id
 			else
 				local p = RPF.Profession(skill)
-				s.other = { skill = skill, code = code, name = p and p.localName or "" }
+				s.other = { skill = skill, code = code, item = lead.id, name = p and p.localName or "" }
 			end
 		end
 		return s
@@ -1122,7 +1124,7 @@ function RPF.ReagentSourceAct(s, name)
 	if s.spell then
 		RPF.SelectSpell(s.spell)
 	elseif s.refine then
-		RPF.Refine.SetView(s.refine)
+		RPF.Refine.SetView(s.refine, s.refineItem)
 	elseif s.other then
 		UIErrorsFrame:AddMessage("Professions can't be opened in combat.", 1, 0.1, 0.1)
 	elseif s.pin then
@@ -1191,9 +1193,8 @@ end
 
 local getToken = 0
 
-local function hideGet()
+local function hideBadges()
 	getToken = getToken + 1
-	getHint:Hide()
 	for _, slot in ipairs(reagentSlots) do
 		slot.badge.other = nil
 		slot.badge:Hide()
@@ -1201,9 +1202,14 @@ local function hideGet()
 	end
 end
 
--- The badges, as each reagent's sources come in.
+local function hideGet()
+	getHint:Hide()
+	hideBadges()
+end
+
+-- The badges, as each reagent's sources come in (the hint line is drawHint's).
 local function drawGet(r)
-	hideGet()
+	hideBadges()
 	local mine = getToken
 	local count = (r.refine or M.linked) and 0 or math.min(#r.reagents, MAX_REAGENTS)
 

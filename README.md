@@ -57,7 +57,10 @@ crafting speed**, earned by skill.
   says "Source unknown." The reagent's own tooltip carries the same line. Clicking the picture
   or the reagent does what its source offers: the recipe (in another of your professions too),
   the nearest vendor or the likeliest creature flagged on your map, the best zones to gather it
-  in. A recipe you know says so under its reagents: "For more details, hover the small icons."
+  in, or Milling and Prospecting on the herb or ore that gives it. A recipe you know says so
+  under its reagents: "For more details, hover the small icons."
+- Each profession reopens on the recipe you had selected in it last, unless something opens it
+  on another (a reagent, the Home page).
 - Nothing in the recipe pane runs over the options along its bottom edge: where to learn a
   recipe shows the lines there's room for, and the last one then stands for the rest ("And 5
   more sources (hover to see them)").

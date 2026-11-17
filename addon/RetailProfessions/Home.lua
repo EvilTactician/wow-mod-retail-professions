@@ -1491,7 +1491,7 @@ end
 local pending
 function H.Pend(action)
 	pending = { action = action, at = GetTime() }
-	if action.code then R.Pend(action.code) end
+	if action.code then R.Pend(action.code, action.item) end
 end
 
 RPF.On("SHOW", function ()
