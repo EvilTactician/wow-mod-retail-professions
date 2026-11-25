@@ -1,13 +1,23 @@
 # Retail Professions 1.25.4
 
 <div align="center">
-
 ![Interface Version](https://img.shields.io/badge/Interface-30300-blue)
 ![WoW Version](https://img.shields.io/badge/WoW-3.3.5a-orange)
 [![Version](https://img.shields.io/badge/Version-1.25.4-green)](https://github.com/EvilTactician/wow-mod-retail-professions)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
-
 </div>
+
+<img width="1141" height="945" alt="image" src="https://github.com/user-attachments/assets/add0c4a1-d598-439c-b9be-3a297df97acb" />
+<details>
+<summary>Click to see more screenshots.</summary>
+  <img width="1142" height="952" alt="image" src="https://github.com/user-attachments/assets/b040da48-0377-4613-b7e7-573abb3a14c3" />
+  <img width="1138" height="949" alt="image" src="https://github.com/user-attachments/assets/27f5f90a-bc5d-4b58-b9cd-34b51d886c8c" />
+  <img width="1141" height="950" alt="image" src="https://github.com/user-attachments/assets/5132069e-5000-4b23-abd3-d5ec44e4d7ed" />
+  <img width="1141" height="951" alt="image" src="https://github.com/user-attachments/assets/996b8014-f946-4dfb-b4ad-10ad18d2e41a" />
+  <img width="1142" height="953" alt="image" src="https://github.com/user-attachments/assets/96094503-ba76-4491-b85d-cf2816360d37" />
+  <img width="1140" height="951" alt="image" src="https://github.com/user-attachments/assets/aa16f0c4-8165-4785-ba9e-42336a5e5c4e" />
+  <img width="735" height="598" alt="image" src="https://github.com/user-attachments/assets/e40a9741-fe22-45fb-aa7f-dbc88ce2e9aa" />
+</details>
 
 An [AzerothCore](https://www.azerothcore.org/) (WotLK 3.3.5a) module and addon that replace the
 old trade skill window with a **retail-style profession window**, in the spirit of WoW Forever's:
