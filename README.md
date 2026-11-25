@@ -9,6 +9,19 @@
 
 </div>
 
+An [AzerothCore](https://www.azerothcore.org/) (WotLK 3.3.5a) module and addon that replace the
+old trade skill window with a **retail-style profession window**, in the spirit of WoW Forever's:
+one clear window with search, filters and skill-up odds, recipes you haven't learned yet and
+where to get them, a recipe tracker and a professions book on **K**.
+
+Crafting itself doesn't change. Every craft is the client's own `DoTradeSkill`, so skill-ups,
+cooldowns, discoveries and other modules' hooks behave as before. The server adds two things
+of its own: **Milling and Prospecting** from the window, which the client can only do one stack
+and one loot window at a time, and retail's crafting stats, **Multicraft, Resourcefulness and
+crafting speed**, earned by skill.
+
+## Screenshots
+
 <img width="1141" height="945" alt="image" src="https://github.com/user-attachments/assets/add0c4a1-d598-439c-b9be-3a297df97acb" />
 <details>
 <summary>Click to see more screenshots.</summary>
@@ -20,17 +33,6 @@
   <img width="1140" height="951" alt="image" src="https://github.com/user-attachments/assets/aa16f0c4-8165-4785-ba9e-42336a5e5c4e" />
   <img width="735" height="598" alt="image" src="https://github.com/user-attachments/assets/e40a9741-fe22-45fb-aa7f-dbc88ce2e9aa" />
 </details>
-
-An [AzerothCore](https://www.azerothcore.org/) (WotLK 3.3.5a) module and addon that replace the
-old trade skill window with a **retail-style profession window**, in the spirit of WoW Forever's:
-one clear window with search, filters and skill-up odds, recipes you haven't learned yet and
-where to get them, a recipe tracker and a professions book on **K**.
-
-Crafting itself doesn't change. Every craft is the client's own `DoTradeSkill`, so skill-ups,
-cooldowns, discoveries and other modules' hooks behave as before. The server adds two things
-of its own: **Milling and Prospecting** from the window, which the client can only do one stack
-and one loot window at a time, and retail's crafting stats, **Multicraft, Resourcefulness and
-crafting speed**, earned by skill.
 
 ## What players get
 
