@@ -1,10 +1,10 @@
-# Retail Professions 1.24.7
+# Retail Professions 1.25.0
 
 <div align="center">
 
 ![Interface Version](https://img.shields.io/badge/Interface-30300-blue)
 ![WoW Version](https://img.shields.io/badge/WoW-3.3.5a-orange)
-[![Version](https://img.shields.io/badge/Version-1.24.7-green)](https://github.com/EvilTactician/wow-mod-retail-professions)
+[![Version](https://img.shields.io/badge/Version-1.25.0-green)](https://github.com/EvilTactician/wow-mod-retail-professions)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 </div>
@@ -87,7 +87,7 @@ crafting speed**, earned by skill.
 - **Add to Shopping List** (with ReagentBankUI): set the amount you want to make, and when your
   bags and reagent bank together fall short the recipe says so ("Short for 18  46 Bolt of Woolen
   Cloth - about 5g 94s", priced from the auction house when
-  [mod-retail-ah](https://github.com/buildthehomelab/wow-mod-retail-ah) is there) with a button
+  [mod-retail-ah](https://github.com/EvilTactician/wow-mod-retail-ah) is there) with a button
   that puts the shortfall on your shopping list. Only what isn't on the list yet is added, so
   asking twice doesn't double it (Shift-click adds it all on top, for a second recipe that needs
   the same reagent). RetailAH's Buy tab opens on that list and counts it down as you buy.
@@ -205,7 +205,7 @@ crafting speed**, earned by skill.
   profession knows (and its cooldowns) whenever you open it. A profession you haven't opened yet
   says "Open ... once".
 
-**Craft for profit** (with [mod-retail-ah](https://github.com/buildthehomelab/wow-mod-retail-ah)'s server)
+**Craft for profit** (with [mod-retail-ah](https://github.com/EvilTactician/wow-mod-retail-ah)'s server)
 - The **coin button** beside Filter turns the list into a ranking of the recipes you know, in the
   spirit of TradeSkillMaster: what the item sells for on the auction house (after the house cut)
   minus what the materials cost, best first.
@@ -276,7 +276,7 @@ crafting speed**, earned by skill.
   window does that), **Create** turns into **Reopen**: click it to open the profession again,
   then craft as usual. In combat it can't, and says to open the profession from your spellbook.
   Without DragonUI, everything above uses this addon's own window.
-- With [mod-reagent-bank-account](https://github.com/buildthehomelab/mod-reagent-bank-account)'s
+- With [mod-reagent-bank-account](https://github.com/EvilTactician/mod-reagent-bank-account)'s
   ReagentBankUI, everything its old profession sidebar did is in this window: the amount,
   crafting from the bank, Deposit leftovers and Add to Shopping List.
 
@@ -348,7 +348,7 @@ client can't know. At startup it indexes every recipe of every profession from
 - and the zones of the spawns involved.
 
 The addon asks through addon whispers to itself (prefix `RPR`, like
-[mod-retail-ah](https://github.com/buildthehomelab/wow-mod-retail-ah)'s `RAH`). It caches a
+[mod-retail-ah](https://github.com/EvilTactician/wow-mod-retail-ah)'s `RAH`). It caches a
 profession's list per data version, so the list travels once.
 
 Without the module the window still works, minus unlearned recipes, exact odds, sources and the
@@ -406,8 +406,8 @@ says there are no auction prices on the realm.
   is tested on).
 - A WoW 3.3.5a (12340) client with the `RetailProfessions` addon installed.
 - Optional: [mod-individual-progression](https://github.com/Grimfeather/mod-individual-progression)
-  (era skill caps and locked continents), [mod-retail-ah](https://github.com/buildthehomelab/wow-mod-retail-ah)
-  (craft-for-profit prices), [mod-reagent-bank-account](https://github.com/buildthehomelab/mod-reagent-bank-account)
+  (era skill caps and locked continents), [mod-retail-ah](https://github.com/EvilTactician/wow-mod-retail-ah)
+  (craft-for-profit prices), [mod-reagent-bank-account](https://github.com/EvilTactician/mod-reagent-bank-account)
   with its ReagentBankUI, and [DragonUI](https://github.com/EvilTactician/wow-addon-DragonUI) (skin).
 
 ## Install
@@ -415,7 +415,7 @@ says there are no auction prices on the realm.
 Server:
 ```
 cd azerothcore-wotlk/modules
-git clone https://github.com/buildthehomelab/wow-mod-retail-professions.git mod-retail-professions
+git clone https://github.com/EvilTactician/wow-mod-retail-professions.git mod-retail-professions
 ```
 Re-run CMake, rebuild, and copy `conf/mod_retail_professions.conf.dist` next to your
 `worldserver.conf`. The SQL under `data/sql` (the profession equipment tables, skill auras, gear
