@@ -1,10 +1,10 @@
-# Retail Professions 1.24.6
+# Retail Professions 1.25.4
 
 <div align="center">
-
+  
 ![Interface Version](https://img.shields.io/badge/Interface-30300-blue)
 ![WoW Version](https://img.shields.io/badge/WoW-3.3.5a-orange)
-[![Version](https://img.shields.io/badge/Version-1.24.6-green)](https://github.com/EvilTactician/wow-mod-retail-professions)
+[![Version](https://img.shields.io/badge/Version-1.25.4-green)](https://github.com/EvilTactician/wow-mod-retail-professions)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 </div>
@@ -19,6 +19,20 @@ cooldowns, discoveries and other modules' hooks behave as before. The server add
 of its own: **Milling and Prospecting** from the window, which the client can only do one stack
 and one loot window at a time, and retail's crafting stats, **Multicraft, Resourcefulness and
 crafting speed**, earned by skill.
+
+## Screenshots
+
+<img width="1141" height="945" alt="image" src="https://github.com/user-attachments/assets/add0c4a1-d598-439c-b9be-3a297df97acb" />
+<details>
+<summary>Click to see more screenshots.</summary>
+  <img width="1142" height="952" alt="image" src="https://github.com/user-attachments/assets/b040da48-0377-4613-b7e7-573abb3a14c3" />
+  <img width="1138" height="949" alt="image" src="https://github.com/user-attachments/assets/27f5f90a-bc5d-4b58-b9cd-34b51d886c8c" />
+  <img width="1141" height="950" alt="image" src="https://github.com/user-attachments/assets/5132069e-5000-4b23-abd3-d5ec44e4d7ed" />
+  <img width="1141" height="951" alt="image" src="https://github.com/user-attachments/assets/996b8014-f946-4dfb-b4ad-10ad18d2e41a" />
+  <img width="1142" height="953" alt="image" src="https://github.com/user-attachments/assets/96094503-ba76-4491-b85d-cf2816360d37" />
+  <img width="1140" height="951" alt="image" src="https://github.com/user-attachments/assets/aa16f0c4-8165-4785-ba9e-42336a5e5c4e" />
+  <img width="735" height="598" alt="image" src="https://github.com/user-attachments/assets/e40a9741-fe22-45fb-aa7f-dbc88ce2e9aa" />
+</details>
 
 ## What players get
 
@@ -85,9 +99,9 @@ crafting speed**, earned by skill.
 - **Deposit leftovers** (with ReagentBankUI): when you close the window, reagents that came out
   of the bank for a craft and weren't used go back into it. What was in your bags before stays.
 - **Add to Shopping List** (with ReagentBankUI): set the amount you want to make, and when your
-  bags and reagent bank together fall short the recipe says so ("Short for 18  46 Bolt of Woolen
-  Cloth - about 5g 94s", priced from the auction house when
-  [mod-retail-ah](https://github.com/buildthehomelab/wow-mod-retail-ah) is there) with a button
+  bags and reagent bank together fall short the recipe says so ("Short for 18 - about 5g 94s";
+  hover it for each reagent you're short of and its price), priced from the auction house when
+  [mod-retail-ah](https://github.com/EvilTactician/wow-mod-retail-ah) is there, with a button
   that puts the shortfall on your shopping list. Only what isn't on the list yet is added, so
   asking twice doesn't double it (Shift-click adds it all on top, for a second recipe that needs
   the same reagent). RetailAH's Buy tab opens on that list and counts it down as you buy.
@@ -205,7 +219,7 @@ crafting speed**, earned by skill.
   profession knows (and its cooldowns) whenever you open it. A profession you haven't opened yet
   says "Open ... once".
 
-**Craft for profit** (with [mod-retail-ah](https://github.com/buildthehomelab/wow-mod-retail-ah)'s server)
+**Craft for profit** (with [mod-retail-ah](https://github.com/EvilTactician/wow-mod-retail-ah)'s server)
 - The **coin button** beside Filter turns the list into a ranking of the recipes you know, in the
   spirit of TradeSkillMaster: what the item sells for on the auction house (after the house cut)
   minus what the materials cost, best first.
@@ -216,17 +230,23 @@ crafting speed**, earned by skill.
   row for the sale price, the materials, the profit and how much you make crafting everything
   you can.
 - The recipe pane gets an **Auction house** block: what it sells for and where that price comes
-  from, how many are listed and how many sold in the last 14 days, the materials (hover for each
-  reagent's price and source) and the profit. It shows for recipes you haven't learned too, so
-  you can see whether one is worth learning.
+  from (hover for how many are listed and sold in the last 14 days), the materials (hover for
+  each reagent's price and source) and the profit. Hover the profit for the whole sum: the sale,
+  the house cut, Multicraft, each reagent, Resourcefulness and, when a missing reagent is one you
+  can gather yourself, how much more the craft makes if you do. It shows for recipes you haven't
+  learned too, so you can see whether one is worth learning.
 - How it prices:
   - **Selling**: the lowest buyout, or with nothing listed, what it sold for lately. When the AH
     bot buyer pays more (it buys every time it looks), that instead. A vendor's price when that's
     more still. Items that bind on pickup are worth their vendor price only. Your own auctions
     aren't counted.
-  - **Materials**: the cheaper of a vendor and the lowest buyout. Materials you already have
-    count at that price too, since crafting has to beat selling them as they are. A material
-    nothing sells counts at its vendor price if you have enough of it.
+  - **Materials you have** (bags, and the reagent bank when it's counted) count at what selling
+    them would bring, since crafting has to beat selling them as they are.
+  - **Materials you don't have**: the cheaper of buying them (a vendor, the AH bot's price or the
+    lowest buyout) and, for one you can craft in this profession, crafting it from its own
+    reagents, priced the same way (one level down).
+  - **Multicraft** adds its extra batches to the sale, **Resourcefulness** takes its refunds off
+    the materials.
 - Prices are the auction house of your own faction (the neutral one with two-side trading), from
   anywhere: no need to stand at an auctioneer. They stay good for 3 minutes; Shift-click the coin
   to ask again. Enchants aren't listed, since they make no item.
@@ -270,7 +290,7 @@ crafting speed**, earned by skill.
   window does that), **Create** turns into **Reopen**: click it to open the profession again,
   then craft as usual. In combat it can't, and says to open the profession from your spellbook.
   Without DragonUI, everything above uses this addon's own window.
-- With [mod-reagent-bank-account](https://github.com/buildthehomelab/mod-reagent-bank-account)'s
+- With [mod-reagent-bank-account](https://github.com/EvilTactician/mod-reagent-bank-account)'s
   ReagentBankUI, everything its old profession sidebar did is in this window: the amount,
   crafting from the bank, Deposit leftovers and Add to Shopping List.
 
@@ -342,7 +362,7 @@ client can't know. At startup it indexes every recipe of every profession from
 - and the zones of the spawns involved.
 
 The addon asks through addon whispers to itself (prefix `RPR`, like
-[mod-retail-ah](https://github.com/buildthehomelab/wow-mod-retail-ah)'s `RAH`). It caches a
+[mod-retail-ah](https://github.com/EvilTactician/wow-mod-retail-ah)'s `RAH`). It caches a
 profession's list per data version, so the list travels once.
 
 Without the module the window still works, minus unlearned recipes, exact odds, sources and the
@@ -400,8 +420,8 @@ says there are no auction prices on the realm.
   is tested on).
 - A WoW 3.3.5a (12340) client with the `RetailProfessions` addon installed.
 - Optional: [mod-individual-progression](https://github.com/Grimfeather/mod-individual-progression)
-  (era skill caps and locked continents), [mod-retail-ah](https://github.com/buildthehomelab/wow-mod-retail-ah)
-  (craft-for-profit prices), [mod-reagent-bank-account](https://github.com/buildthehomelab/mod-reagent-bank-account)
+  (era skill caps and locked continents), [mod-retail-ah](https://github.com/EvilTactician/wow-mod-retail-ah)
+  (craft-for-profit prices), [mod-reagent-bank-account](https://github.com/EvilTactician/mod-reagent-bank-account)
   with its ReagentBankUI, and [DragonUI](https://github.com/EvilTactician/wow-addon-DragonUI) (skin).
 
 ## Install
@@ -409,7 +429,7 @@ says there are no auction prices on the realm.
 Server:
 ```
 cd azerothcore-wotlk/modules
-git clone https://github.com/buildthehomelab/wow-mod-retail-professions.git mod-retail-professions
+git clone https://github.com/EvilTactician/wow-mod-retail-professions.git mod-retail-professions
 ```
 Re-run CMake, rebuild, and copy `conf/mod_retail_professions.conf.dist` next to your
 `worldserver.conf`. The SQL under `data/sql` (the profession equipment tables, skill auras, gear
@@ -482,7 +502,8 @@ Each request is bounded to the addon-message size limit and only one batch is in
 queued batches start after completion, avoiding the old startup request burst. Prices
 are reused for three minutes across recipe details, Training and Most profitable crafts.
 
-Material cost uses the cheaper vendor or bot reference. Estimated output proceeds deduct
+Materials you don't have cost the cheaper vendor or bot reference (or crafting them, one
+level down); ones you have count at their estimated proceeds. Estimated output proceeds deduct
 the effective house cut; vendor sales and the existing modeled buyer offer remain alternatives.
 Labels distinguish bot reference estimates from live lowest-buyout prices. References do
 not establish stock availability or guarantee a player sale; craft options may share the

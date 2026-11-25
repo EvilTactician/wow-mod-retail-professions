@@ -683,6 +683,14 @@ end
 local function buttonWithText(text)
 	return find(function (f) return f.__kind == "Button" and f.__text == text end)
 end
+-- Money as text: coin icons back to g/s/c, colours dropped.
+local function money(text)
+	text = tostring(text or ""):gsub("|T[^|]-UI%-(%a+)Icon[^|]*|t", function (coin)
+		return coin == "Gold" and "g" or coin == "Silver" and "s" or "c"
+	end)
+	return (text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+end
+
 local function textShown(pattern)
 	return find(function (f) return f.__kind == "FontString" and f.__text:find(pattern) and f:IsVisible() end)
 end
@@ -1344,9 +1352,9 @@ step("what the amount is short of goes on the shopping list, once", function ()
 	assert(not add:IsVisible(), "shopping row shown with nothing short")
 	RPF.SetQuantity(20)
 	assert(add:IsVisible() and add:IsEnabled(), "shopping row not shown for 20")
-	assert(textShown("Short for 20|r  6 Linen Cloth"), "wrong shortfall")
+	assert(textShown("Short for 20|r"), "wrong shortfall")
 	-- Lowest buyout 10c each.
-	assert(textShown("about 60c"), "no price on the shortfall")
+	assert(textShown("about|r 60|TInterface"), "no price on the shortfall")
 	-- Not while the bank's counts are unknown: all 30 in it would look missing.
 	ReagentBankUI.snapshot = false
 	add.__scripts.OnClick(add)
@@ -1359,7 +1367,7 @@ step("what the amount is short of goes on the shopping list, once", function ()
 	add.__scripts.OnClick(add)
 	assert(ReagentBankUI.shopping[2589] == 6, "a second click doubled it")
 	RPF.SetQuantity(21)
-	assert(textShown("8 Linen Cloth"), "row didn't follow the amount")
+	assert(textShown("Short for 21|r"), "row didn't follow the amount")
 	add.__scripts.OnClick(add)
 	assert(ReagentBankUI.shopping[2589] == 8, "the difference wasn't added: " .. tostring(ReagentBankUI.shopping[2589]))
 	IsShiftKeyDown = function () return true end
@@ -1439,19 +1447,38 @@ step("craft for profit: ranked by auction prices", function ()
 	assert(#rahSent >= 1 and rahSent[#rahSent]:find("^K:p%d+:"), "no price request")
 	assert(RPF.Profit.state == "ok", "prices not taken: " .. RPF.Profit.state)
 	local rows = RPF.list.rows
-	-- Bolt: sells 60 -5% = 57, two linen at 10 = 20, so +37c, and the bags make 2.
+	-- Bolt: sells 60 -5% = 57, x1.25 for 25% Multicraft = 71; the two linen are in the bags, so
+	-- they count at what selling them brings (10 -5% = 9 each) = 18, less 1 Resourcefulness: +54c.
+	-- The bags make 2.
 	assert(rows[1].header == "Craft now" and rows[2].recipe.spell == 2963, "craft-now group: " .. tostring(rows[1].header))
-	assert(rows[2].right:find("+37c", 1, true), "bolt profit: " .. tostring(rows[2].right))
-	-- Vest: 300 -5% = 285, three linen 30 + coarse thread from a vendor 10 = 40; no thread in the bags.
+	assert(money(rows[2].right) == "54c", "bolt profit: " .. money(rows[2].right))
+	-- Vest: 300 -5% = 285, three linen from the bags 27 + coarse thread from a vendor 10 = 37, less 2
+	-- Resourcefulness = 35; no thread in the bags.
 	assert(rows[3].header == "Buy materials and craft" and rows[4].recipe.spell == 2385, "buy group: " .. tostring(rows[3].header))
-	assert(rows[4].right:find("+2s 45c", 1, true), "vest profit: " .. tostring(rows[4].right))
+	assert(money(rows[4].right) == "2s 50c", "vest profit: " .. money(rows[4].right))
 	RPF.Select(M.bySpell[2385])
 	tick(0.2)
 	assert(textShown("Sells for"), "price block missing")
-	assert(textShown("3 listed, 5 sold in 14 days"), "market line missing")
+	-- The market line is in the Sells for tooltip now, keeping the line short.
+	assert(RPF.Profit.MarketText(2568) == "3 listed, 5 sold in 14 days", "market line missing")
+	-- The Profit line's tooltip shows the sum behind it.
+	local tipLines = {}
+	local tip = {
+		AddLine = function (_, text) table.insert(tipLines, text) end,
+		AddDoubleLine = function (_, left, right) table.insert(tipLines, left .. " = " .. right) end,
+	}
+	RPF.Profit.AddProfitLines(tip, M.bySpell[2385], RPF.Profit.Of(M.bySpell[2385]), function () return "fish" end)
+	local tipText = table.concat(tipLines, "\n")
+	assert(tipText:find("Profit per craft", 1, true) and tipText:find("5% auction cut", 1, true)
+		and tipText:find("Resourcefulness 20%", 1, true), "profit tooltip: " .. tipText)
 	assert(textShown("Profit"), "profit line missing")
 	local a = RPF.Profit.Of(M.bySpell[2385])
-	assert(a.parts[2].how == "vendor" and a.cost == 40, "thread should come from the vendor")
+	assert(a.parts[2].how == "vendor" and a.cost == 35, "thread should come from the vendor")
+	-- A reagent you can craft yourself counts at the cheaper of buying it (bolts at 60) and crafting
+	-- it from what's in the bags (two linen worth 18, making 1.25 bolts).
+	local robe = RPF.Profit.Of({ name = "Robe", item = 2568, reagents = { { id = 2996, n = 1 } } })
+	assert(robe.parts[1].buyHow == "made" and robe.parts[1].cost < 60, "the bolt wasn't priced as crafted: "
+		.. tostring(robe.parts[1].buyHow) .. " " .. tostring(robe.parts[1].cost))
 	-- The unlearned bracers bind on pickup: worth their vendor price only.
 	RPF.Profit.Fetch({ 4308 })
 	tick(0.2)
@@ -1610,9 +1637,9 @@ step("home: the Training and Profit tabs, the professions and the most profitabl
 	assert(RPF.Profit.state == "ok", "no prices after Refresh: " .. RPF.Profit.state)
 	local row1 = RPF.Home.rows.crafts[1]
 	local row2 = RPF.Home.rows.crafts[2]
-	-- Vest +2s 45c a craft, bolt +37c.
+	-- Vest +2s 57c a craft (the thread is in the bags now: worth 2c sold), bolt +54c.
 	assert(row1.entry and row1.entry.recipe.spell == 2385, "first craft: " .. tostring(row1.entry and row1.entry.recipe.name))
-	assert(row1.cells.profit.__text:find("+2s 45c", 1, true), "vest profit: " .. row1.cells.profit.__text)
+	assert(money(row1.cells.profit.__text) == "2s 57c", "vest profit: " .. money(row1.cells.profit.__text))
 	assert(row2.entry and row2.entry.recipe.spell == 2963, "second craft")
 	assert(textShown("Estimated craft options"), "no summary of what the bags make")
 

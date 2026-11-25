@@ -2020,6 +2020,14 @@ namespace RetailProfessions::Index
             return name.empty() ? "during an event" : name + " only";
         }
 
+        // "for 5" when the gold price buys a batch (Simple Flour, Mild Spices); "" otherwise.
+        std::string BatchText(ItemTemplate const* item, bool gold)
+        {
+            if (!gold || !item || item->BuyPrice <= 0 || item->BuyCount <= 1)
+                return "";
+            return "for " + std::to_string(item->BuyCount);
+        }
+
         // What a vendor wants besides gold: "3 Dalaran Cooking Award", "40 Badge of Justice".
         std::string CostText(uint32 extendedCost)
         {
@@ -2596,7 +2604,7 @@ namespace RetailProfessions::Index
                     details.push_back(event);
                 vendors.emplace_back(distance(where), FitRow(Acore::StringFormat("V,{},{},{},{},{},{}", v.creature,
                     Escape(creature->Name), Escape(PlaceName(*where)), v.gold && item ? std::max(0, item->BuyPrice) : 0,
-                    v.maxcount ? 1 : 0, Escape(reputation)), Join({ cost, event }, ", "), details, budget));
+                    v.maxcount ? 1 : 0, Escape(reputation)), Join({ BatchText(item, v.gold), cost, event }, ", "), details, budget));
             }
             std::sort(vendors.begin(), vendors.end(), [](auto const& a, auto const& b) { return a.first < b.first; });
             for (std::size_t i = 0; i < vendors.size() && i < limit; ++i)
@@ -2889,7 +2897,7 @@ namespace RetailProfessions::Index
                 float distance = where->map == player->GetMapId() ? player->GetExactDist2d(where->x, where->y) : 1e9f;
                 vendors.emplace_back(distance, FitRow(Acore::StringFormat("V,{},{},{},{},{},-", v.creature,
                     Escape(creature->Name), Escape(PlaceName(*where)), v.gold && item ? std::max(0, item->BuyPrice) : 0,
-                    v.maxcount ? 1 : 0), Join({ cost, event }, ", "), details, budget));
+                    v.maxcount ? 1 : 0), Join({ BatchText(item, v.gold), cost, event }, ", "), details, budget));
             }
             std::sort(vendors.begin(), vendors.end(), [](auto const& a, auto const& b) { return a.first < b.first; });
             for (std::size_t i = 0; i < vendors.size() && i < limit; ++i)
