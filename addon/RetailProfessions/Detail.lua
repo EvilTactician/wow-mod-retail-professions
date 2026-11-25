@@ -397,7 +397,7 @@ local function drawShopping(r, anchor)
 	local text = string.format("|cffffd200Short for %d|r", count)
 	if RPF.Profit.state ~= "missing" then
 		RPF.Profit.Fetch(shortEntries(short))
-		if priced then text = text .. " |cff9d9d9d- about " .. RPF.Profit.Short(cost) .. "|r" end
+		if priced then text = text .. " |cff9d9d9d- about|r " .. RPF.Profit.Coins(cost) end
 	end
 	local listed = onListTotal(short)
 	if listed > 0 then text = text .. string.format("  |cff4fc3f7%d on the list|r", listed) end
@@ -424,7 +424,7 @@ shopRow:SetScript("OnEnter", function (self)
 		local name = part.amount .. " x " .. (M.ReagentName(part.rg) or ("Item #" .. part.rg.id))
 		if unit then
 			total = total + unit * part.amount
-			GameTooltip:AddDoubleLine(name, RPF.Profit.Short(math.floor(unit * part.amount))
+			GameTooltip:AddDoubleLine(name, RPF.Profit.CoinsCost(math.floor(unit * part.amount))
 				.. " |cff9d9d9d(" .. RPF.Profit.HowBuy(how) .. ")|r", 1, 1, 1, 1, 1, 1)
 		else
 			priced = false
@@ -432,7 +432,7 @@ shopRow:SetScript("OnEnter", function (self)
 		end
 	end
 	if #shopShort > 1 then
-		GameTooltip:AddDoubleLine("Total", priced and RPF.Profit.Short(math.floor(total)) or "?", 1, 0.82, 0, 1, 1, 1)
+		GameTooltip:AddDoubleLine("Total", priced and RPF.Profit.CoinsCost(math.floor(total)) or "?", 1, 0.82, 0, 1, 1, 1)
 	end
 	GameTooltip:Show()
 end)
@@ -493,13 +493,13 @@ local function materialsTip(a)
 		tip:SetText("Materials per craft")
 		for _, part in ipairs(a.parts) do
 			local name = M.ReagentName(part.rg) or ("Item #" .. tostring(part.rg.id or "?"))
-			local right = part.known and (RPF.Profit.Short(math.floor(part.cost)) .. " |cff9d9d9d(" .. RPF.Profit.HowBuy(part.how) .. ")|r")
+			local right = part.known and (RPF.Profit.CoinsCost(math.floor(part.cost)) .. " |cff9d9d9d(" .. RPF.Profit.HowBuy(part.how) .. ")|r")
 				or "|cffff4040no price|r"
 			tip:AddDoubleLine(part.rg.n .. " x " .. name, right, 1, 1, 1, 1, 1, 1)
 		end
 		if a.saving > 0 then
 			tip:AddDoubleLine(string.format("Resourcefulness %d%%", math.floor((a.resourceful or 0) + 0.5)),
-				"-" .. RPF.Profit.Short(a.saving), 1, 1, 1, 0.25, 1, 0.25)
+				RPF.Profit.CoinsIn(a.saving), 1, 1, 1, 1, 1, 1)
 		end
 		tip:AddLine("Materials you have count at what selling them would bring: crafting has to beat that. "
 			.. "Ones you can craft yourself count at the cheaper of buying and crafting them.", 0.6, 0.6, 0.6, true)
@@ -527,19 +527,19 @@ local function drawPrices(r, anchor)
 		return priceLines[1]
 	end
 
-	local sells = string.format("|cffffd200Sells for|r  %s each |cff9d9d9d(%s)|r", P.Short(a.unitValue), P.HowSell(a.valueHow))
+	local sells = string.format("|cffffd200Sells for|r  %s each |cff9d9d9d(%s)|r", P.Coins(a.unitValue), P.HowSell(a.valueHow))
 	if a.made ~= 1 then sells = sells .. string.format("  x%s", a.made % 1 == 0 and tostring(a.made) or string.format("%.1f", a.made)) end
 	priceLines[1].text:SetText(sells)
 	priceLines[1].tip = function (tip)
 		local p = P.Get(r.item)
 		tip:SetText("Sells for")
 		if p and p.soulbound then tip:AddLine("Binds when picked up: only a vendor buys it.", 1, 1, 1, true) end
-		if p and p.lowest > 0 then tip:AddDoubleLine("Lowest buyout", P.Short(p.lowest), 1, 1, 1, 1, 1, 1) end
-		if p and p.bot > 0 then tip:AddDoubleLine("The AH bot pays", P.Short(p.bot), 1, 1, 1, 1, 1, 1) end
+		if p and p.lowest > 0 then tip:AddDoubleLine("Lowest buyout", P.Coins(p.lowest), 1, 1, 1, 1, 1, 1) end
+		if p and p.bot > 0 then tip:AddDoubleLine("The AH bot pays", P.Coins(p.bot), 1, 1, 1, 1, 1, 1) end
 		if p and p.soldUnits > 0 then
-			tip:AddDoubleLine(string.format("Sold lately (%d days)", P.days), P.Short(math.floor(p.soldCopper / p.soldUnits)) .. " avg", 1, 1, 1, 1, 1, 1)
+			tip:AddDoubleLine(string.format("Sold lately (%d days)", P.days), P.Coins(math.floor(p.soldCopper / p.soldUnits)) .. " avg", 1, 1, 1, 1, 1, 1)
 		end
-		if p and p.sell > 0 then tip:AddDoubleLine("A vendor pays", P.Short(p.sell), 1, 1, 1, 1, 1, 1) end
+		if p and p.sell > 0 then tip:AddDoubleLine("A vendor pays", P.Coins(p.sell), 1, 1, 1, 1, 1, 1) end
 		local market = P.MarketText(r.item)
 		if market ~= "" then tip:AddLine(market, 1, 1, 1, true) end
 		tip:AddLine(string.format("Counted after the %s%% house cut, except the vendor price.", P.CutText()), 0.6, 0.6, 0.6, true)
@@ -547,15 +547,15 @@ local function drawPrices(r, anchor)
 	end
 	priceLines[1]:Show()
 
-	priceLines[2].text:SetText("|cffffd200Materials|r  " .. (a.costKnown and P.Short(a.cost) or "|cffff4040?|r")
+	priceLines[2].text:SetText("|cffffd200Materials|r  " .. (a.costKnown and P.CoinsCost(a.cost) or "|cffff4040?|r")
 		.. (a.costKnown and "" or " |cff9d9d9d(something has no price)|r") .. " |cff9d9d9dper craft|r")
 	priceLines[2].tip = materialsTip(a)
 	priceLines[2]:Show()
 
 	if a.costKnown then
-		local text = "|cffffd200Profit|r  " .. P.Signed(a.profit) .. " |cff9d9d9dper craft|r"
+		local text = "|cffffd200Profit|r  " .. P.CoinsSigned(a.profit) .. " |cff9d9d9dper craft|r"
 		local n = r.learned and P.CanMake(r) or 0
-		if n > 1 and a.profit > 0 then text = text .. string.format("  |cff9d9d9d- %s for the %d you can make|r", P.Signed(a.profit * n), n) end
+		if n > 1 and a.profit > 0 then text = text .. string.format("  |cff9d9d9d- %s for the %d you can make|r", P.CoinsSigned(a.profit * n), n) end
 		priceLines[3].text:SetText(text)
 		priceLines[3].tip = function (tip)
 			tip:SetText("How the profit adds up")

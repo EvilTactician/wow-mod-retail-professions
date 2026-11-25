@@ -62,6 +62,28 @@ function P.Signed(copper)
 	return "|cffff4040-" .. P.Short(copper) .. "|r"
 end
 
+-- P.Short with coin icons, as the game's own tooltips show money: gold and silver, or silver
+-- and copper.
+local COIN = "|TInterface\\MoneyFrame\\UI-%sIcon:12:12:2:0|t"
+local GOLD, SILVER, COPPER = COIN:format("Gold"), COIN:format("Silver"), COIN:format("Copper")
+function P.Coins(copper)
+	copper = floor(abs(tonumber(copper) or 0))
+	local g, s, c = floor(copper / 10000), floor(copper / 100) % 100, copper % 100
+	if g > 0 then return string.format("%d%s %02d%s", g, GOLD, s, SILVER) end
+	if s > 0 then return string.format("%d%s %02d%s", s, SILVER, c, COPPER) end
+	return c .. COPPER
+end
+
+-- Coin amounts in a colour: white, green (what comes in) or red (what goes out).
+local GREEN, RED = "|cff40ff40", "|cffff4040"
+function P.CoinsIn(copper) return GREEN .. "+" .. P.Coins(copper) .. "|r" end
+function P.CoinsOut(copper) return RED .. "-" .. P.Coins(copper) .. "|r" end
+-- A cost, in red without a sign: what materials come to.
+function P.CoinsCost(copper) return RED .. P.Coins(copper) .. "|r" end
+function P.CoinsSigned(copper)
+	return copper >= 0 and P.CoinsIn(copper) or P.CoinsOut(copper)
+end
+
 -----------------------------------------
 -- talking to the server
 
@@ -600,20 +622,20 @@ function P.AddProfitLines(tip, r, a, gatherable)
 	-- A blank line before each heading, so the sections stand apart.
 	local function gap() tip:AddLine(" ") end
 	gap()
-	row("Sells for", P.Short(floor(a.unitValue * a.made)) .. (a.made ~= 1 and string.format(" |cff9d9d9d(x%s)|r",
+	row("Sells for", P.Coins(floor(a.unitValue * a.made)) .. (a.made ~= 1 and string.format(" |cff9d9d9d(x%s)|r",
 		a.made % 1 == 0 and tostring(a.made) or string.format("%.1f", a.made)) or ""), 1, 0.82, 0, W, W, W)
 	if a.grossUnit and a.valueHow ~= "vendor" then
-		row("  " .. HOW_SELL[a.valueHow], P.Short(floor(a.grossUnit * a.made)), W, W, W, W, W, W)
-		row("  " .. P.CutText() .. "% auction cut", "-" .. P.Short(floor((a.grossUnit - a.unitValue) * a.made)), W, W, W, W, W, W)
+		row("  " .. HOW_SELL[a.valueHow], P.CoinsIn(floor(a.grossUnit * a.made)), W, W, W, W, W, W)
+		row("  " .. P.CutText() .. "% auction cut", P.CoinsOut(floor((a.grossUnit - a.unitValue) * a.made)), W, W, W, W, W, W)
 	else
 		row("  " .. (HOW_SELL[a.valueHow] or ""), "", W, W, W)
 	end
 	if a.multicraft and a.multicraft > 0 then
 		row(string.format("  Multicraft %d%%", floor(a.multicraft + 0.5)),
-			"+" .. P.Short(a.value - floor(a.unitValue * a.made)), W, W, W, 0.25, 1, 0.25)
+			P.CoinsIn(a.value - floor(a.unitValue * a.made)), W, W, W, W, W, W)
 	end
 	gap()
-	row("Materials", a.costKnown and P.Short(a.cost) or "?", 1, 0.82, 0, W, W, W)
+	row("Materials", a.costKnown and P.CoinsCost(a.cost) or "?", 1, 0.82, 0, W, W, W)
 	for _, part in ipairs(a.parts) do
 		local name = M.ReagentName(part.rg) or ("Item #" .. tostring(part.rg.id or "?"))
 		local how
@@ -627,15 +649,15 @@ function P.AddProfitLines(tip, r, a, gatherable)
 			how = string.format("%d yours, %d %s", part.have, part.missing, part.buyHow == "made" and "to craft" or "to buy")
 		end
 		row(string.format("  %d %s |cff9d9d9d%s|r", part.n, name, how),
-			part.known and P.Short(floor(part.cost)) or "?", W, W, W, W, W, W)
+			part.known and P.CoinsCost(floor(part.cost)) or "?", W, W, W, W, W, W)
 	end
 	if a.saving > 0 then
-		row(string.format("  Resourcefulness %d%%", floor((a.resourceful or 0) + 0.5)), "-" .. P.Short(a.saving),
-			W, W, W, 0.25, 1, 0.25)
+		row(string.format("  Resourcefulness %d%%", floor((a.resourceful or 0) + 0.5)), P.CoinsIn(a.saving),
+			W, W, W, W, W, W)
 	end
 	if a.costKnown then
 		gap()
-		row("Profit per craft", P.Signed(a.profit), 1, 0.82, 0, W, W, W)
+		row("Profit per craft", P.CoinsSigned(a.profit), 1, 0.82, 0, W, W, W)
 	end
 	-- Missing reagents you could gather yourself instead of buying.
 	local lines, gain = {}, 0
@@ -651,9 +673,9 @@ function P.AddProfitLines(tip, r, a, gatherable)
 	if #lines > 0 then
 		gap()
 		tip:AddLine("If you gather it yourself", 1, 0.82, 0)
-		for _, line in ipairs(lines) do row(line[1], "+" .. P.Short(line[2]), W, W, W, 0.25, 1, 0.25) end
+		for _, line in ipairs(lines) do row(line[1], P.CoinsIn(line[2]), W, W, W, W, W, W) end
 		gap()
-		row("Profit if gathered", P.Signed(a.profit + gain), 1, 0.82, 0, W, W, W)
+		row("Profit if gathered", P.CoinsSigned(a.profit + gain), 1, 0.82, 0, W, W, W)
 	end
 	gap()
 	for _, note in ipairs(P.SellNotes(r.item)) do tip:AddLine(note, G, G, G, true) end

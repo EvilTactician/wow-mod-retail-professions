@@ -1346,7 +1346,7 @@ step("what the amount is short of goes on the shopping list, once", function ()
 	assert(add:IsVisible() and add:IsEnabled(), "shopping row not shown for 20")
 	assert(textShown("Short for 20|r"), "wrong shortfall")
 	-- Lowest buyout 10c each.
-	assert(textShown("about 60c"), "no price on the shortfall")
+	assert(textShown("about|r 60|TInterface"), "no price on the shortfall")
 	-- Not while the bank's counts are unknown: all 30 in it would look missing.
 	ReagentBankUI.snapshot = false
 	add.__scripts.OnClick(add)
