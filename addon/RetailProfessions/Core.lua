@@ -455,6 +455,27 @@ function RPF.BankCountsKnown()
 	return not ok or fresh and true or false
 end
 
+-- ReagentBankUI's snapshot of the bank lasts five minutes, after which every count reads 0
+-- until something asks again. While the window is open, ask for a new one before it runs
+-- out, and redraw when one lands (the "+N in bank" counts and the profit view use it).
+do
+	local SNAPSHOT_REFRESH = 240
+	local watcher, nextCheck, seenAt = CreateFrame("Frame"), 0, nil
+	watcher:SetScript("OnUpdate", function ()
+		local now = GetTime()
+		if now < nextCheck or not RPF.active then return end
+		nextCheck = now + 2
+		local RB = _G.ReagentBankUI
+		if not (RB and RB.RequestBankSnapshot) or RB.bankSnapshotUnsupported then return end
+		local at = RB.bankSnapshotAt
+		if at ~= seenAt then
+			seenAt = at
+			if at then RPF.Debounce("bags", 0.25, function () RPF.Fire("BAGS") end) end
+		end
+		if not at or now - at > SNAPSHOT_REFRESH then pcall(RB.RequestBankSnapshot, RB, true) end
+	end)
+end
+
 -----------------------------------------
 -- the auction house shopping list (ReagentBankUI keeps it; RetailAH's Buy tab shows it)
 

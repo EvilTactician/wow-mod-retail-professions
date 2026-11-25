@@ -1344,7 +1344,7 @@ step("what the amount is short of goes on the shopping list, once", function ()
 	assert(not add:IsVisible(), "shopping row shown with nothing short")
 	RPF.SetQuantity(20)
 	assert(add:IsVisible() and add:IsEnabled(), "shopping row not shown for 20")
-	assert(textShown("Short for 20|r  6 Linen Cloth"), "wrong shortfall")
+	assert(textShown("Short for 20|r"), "wrong shortfall")
 	-- Lowest buyout 10c each.
 	assert(textShown("about 60c"), "no price on the shortfall")
 	-- Not while the bank's counts are unknown: all 30 in it would look missing.
@@ -1359,7 +1359,7 @@ step("what the amount is short of goes on the shopping list, once", function ()
 	add.__scripts.OnClick(add)
 	assert(ReagentBankUI.shopping[2589] == 6, "a second click doubled it")
 	RPF.SetQuantity(21)
-	assert(textShown("8 Linen Cloth"), "row didn't follow the amount")
+	assert(textShown("Short for 21|r"), "row didn't follow the amount")
 	add.__scripts.OnClick(add)
 	assert(ReagentBankUI.shopping[2589] == 8, "the difference wasn't added: " .. tostring(ReagentBankUI.shopping[2589]))
 	IsShiftKeyDown = function () return true end

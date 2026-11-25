@@ -595,19 +595,21 @@ end
 -- how you could gather a reagent yourself ("mine"), or nil.
 function P.AddProfitLines(tip, r, a, gatherable)
 	local W, G = 1, 0.6
-	tip:AddDoubleLine("Sells for", P.Short(floor(a.unitValue * a.made)) .. (a.made ~= 1 and string.format(" |cff9d9d9d(x%s)|r",
+	-- A gap after the left text, so it never runs into the amount.
+	local function row(left, right, ...) tip:AddDoubleLine(left .. "      ", right, ...) end
+	row("Sells for", P.Short(floor(a.unitValue * a.made)) .. (a.made ~= 1 and string.format(" |cff9d9d9d(x%s)|r",
 		a.made % 1 == 0 and tostring(a.made) or string.format("%.1f", a.made)) or ""), 1, 0.82, 0, W, W, W)
 	if a.grossUnit and a.valueHow ~= "vendor" then
-		tip:AddDoubleLine("  " .. HOW_SELL[a.valueHow], P.Short(floor(a.grossUnit * a.made)), W, W, W, W, W, W)
-		tip:AddDoubleLine("  " .. P.CutText() .. "% auction cut", "-" .. P.Short(floor((a.grossUnit - a.unitValue) * a.made)), W, W, W, W, W, W)
+		row("  " .. HOW_SELL[a.valueHow], P.Short(floor(a.grossUnit * a.made)), W, W, W, W, W, W)
+		row("  " .. P.CutText() .. "% auction cut", "-" .. P.Short(floor((a.grossUnit - a.unitValue) * a.made)), W, W, W, W, W, W)
 	else
-		tip:AddDoubleLine("  " .. (HOW_SELL[a.valueHow] or ""), "", W, W, W)
+		row("  " .. (HOW_SELL[a.valueHow] or ""), "", W, W, W)
 	end
 	if a.multicraft and a.multicraft > 0 then
-		tip:AddDoubleLine(string.format("  Multicraft %d%%", floor(a.multicraft + 0.5)),
+		row(string.format("  Multicraft %d%%", floor(a.multicraft + 0.5)),
 			"+" .. P.Short(a.value - floor(a.unitValue * a.made)), W, W, W, 0.25, 1, 0.25)
 	end
-	tip:AddDoubleLine("Materials", a.costKnown and P.Short(a.cost) or "?", 1, 0.82, 0, W, W, W)
+	row("Materials", a.costKnown and P.Short(a.cost) or "?", 1, 0.82, 0, W, W, W)
 	for _, part in ipairs(a.parts) do
 		local name = M.ReagentName(part.rg) or ("Item #" .. tostring(part.rg.id or "?"))
 		local how
@@ -620,15 +622,15 @@ function P.AddProfitLines(tip, r, a, gatherable)
 		else
 			how = string.format("%d yours, %d %s", part.have, part.missing, part.buyHow == "made" and "to craft" or "to buy")
 		end
-		tip:AddDoubleLine(string.format("  %d %s |cff9d9d9d%s|r", part.n, name, how),
+		row(string.format("  %d %s |cff9d9d9d%s|r", part.n, name, how),
 			part.known and P.Short(floor(part.cost)) or "?", W, W, W, W, W, W)
 	end
 	if a.saving > 0 then
-		tip:AddDoubleLine(string.format("  Resourcefulness %d%%", floor((a.resourceful or 0) + 0.5)), "-" .. P.Short(a.saving),
+		row(string.format("  Resourcefulness %d%%", floor((a.resourceful or 0) + 0.5)), "-" .. P.Short(a.saving),
 			W, W, W, 0.25, 1, 0.25)
 	end
 	if a.costKnown then
-		tip:AddDoubleLine("Profit per craft", P.Signed(a.profit), 1, 0.82, 0, W, W, W)
+		row("Profit per craft", P.Signed(a.profit), 1, 0.82, 0, W, W, W)
 	end
 	-- Missing reagents you could gather yourself instead of buying.
 	local lines, gain = {}, 0
@@ -643,8 +645,8 @@ function P.AddProfitLines(tip, r, a, gatherable)
 	end
 	if #lines > 0 then
 		tip:AddLine("If you gather it yourself", 1, 0.82, 0)
-		for _, line in ipairs(lines) do tip:AddDoubleLine(line[1], "+" .. P.Short(line[2]), W, W, W, 0.25, 1, 0.25) end
-		tip:AddDoubleLine("Profit if gathered", P.Signed(a.profit + gain), 1, 0.82, 0, W, W, W)
+		for _, line in ipairs(lines) do row(line[1], "+" .. P.Short(line[2]), W, W, W, 0.25, 1, 0.25) end
+		row("Profit if gathered", P.Signed(a.profit + gain), 1, 0.82, 0, W, W, W)
 	end
 	for _, note in ipairs(P.SellNotes(r.item)) do tip:AddLine(note, G, G, G, true) end
 	tip:AddLine("Materials you have count at what selling them would bring: crafting has to beat that.", G, G, G, true)

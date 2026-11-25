@@ -598,28 +598,38 @@ function RPF.Status(text, isError)
 	RPF.After(8, function () if mine == statusToken then status:SetText("") end end)
 end
 
--- In DragonUI's window (Host.lua) the card is its own, narrower one: no card art of ours, and the
--- reagent bank options go on a row above Track Recipe, the feedback line over them.
+-- In DragonUI's window (Host.lua) the card is its own: no card art of ours, and the reagent bank
+-- options come first on the bottom row, Track Recipe after them, the feedback line over them.
 local hostLayout = false
+
+local function placeTrack()
+	trackCheck:ClearAllPoints()
+	if hostLayout and leftoversCheck:IsShown() then
+		trackCheck:SetPoint("LEFT", leftoversCheck.label, "RIGHT", 14, 0)
+	else
+		trackCheck:SetPoint("BOTTOMLEFT", right, "BOTTOMLEFT", 8, 6)
+	end
+end
+
 function RPF.HostLayout(on)
 	hostLayout = on and true or false
 	if right.SetCardArtShown then right:SetCardArtShown(not on) end
 	bankCheck:ClearAllPoints()
 	status:ClearAllPoints()
 	if on then
-		bankCheck:SetPoint("BOTTOMLEFT", right, "BOTTOMLEFT", 8, 28)
-		status:SetPoint("BOTTOMLEFT", right, "BOTTOMLEFT", 12, 54)
+		bankCheck:SetPoint("BOTTOMLEFT", right, "BOTTOMLEFT", 8, 6)
 	else
 		bankCheck:SetPoint("LEFT", trackCheck.label, "RIGHT", 14, 0)
-		status:SetPoint("BOTTOMLEFT", right, "BOTTOMLEFT", 12, 32)
 	end
+	placeTrack()
+	status:SetPoint("BOTTOMLEFT", right, "BOTTOMLEFT", 12, 32)
 	status:SetPoint("RIGHT", right, "RIGHT", -110, 0)
 end
 
 -- How much of the recipe pane's bottom those options and the feedback line take: what the
 -- pane lists (where to learn a recipe, where its reagents come from) stops above it.
 function RPF.DetailReserve()
-	return hostLayout and 72 or 50
+	return 50
 end
 
 local function getQuantity()
@@ -831,6 +841,7 @@ local function updateControls()
 		bankCheck:Hide()
 		leftoversCheck:Hide()
 	end
+	placeTrack()
 	trackCheck:SetChecked(r and isTracked(r))
 	RPF.SetEnabled(trackCheck, r ~= nil)
 

@@ -364,8 +364,8 @@ local shopText = label(shopRow, "GameFontHighlightSmall")
 shopText:SetPoint("TOPLEFT", shopButton, "TOPRIGHT", 8, -1)
 shopText:SetJustifyV("TOP")
 
--- More reagents than this are counted, not named, so the line stays short.
-local SHOP_NAMES = 3
+-- What the bags and the reagent bank are short of, named in the line's tooltip.
+local shopShort, shopCount = {}, 1
 
 local function shortEntries(short)
 	local entries = {}
@@ -388,16 +388,13 @@ local function drawShopping(r, anchor)
 		return anchor
 	end
 
-	local names, cost, priced = {}, 0, true
-	for i, part in ipairs(short) do
-		if i <= SHOP_NAMES then
-			table.insert(names, part.amount .. " " .. (M.ReagentName(part.rg) or ("Item #" .. part.rg.id)))
-		end
+	shopShort, shopCount = short, count
+	local cost, priced = 0, true
+	for _, part in ipairs(short) do
 		local unit = RPF.Profit.BuyCost(part.rg.id)
 		if unit then cost = cost + unit * part.amount else priced = false end
 	end
-	local text = string.format("|cffffd200Short for %d|r  %s", count, table.concat(names, ", "))
-	if #short > SHOP_NAMES then text = text .. " and " .. (#short - SHOP_NAMES) .. " more" end
+	local text = string.format("|cffffd200Short for %d|r", count)
 	if RPF.Profit.state ~= "missing" then
 		RPF.Profit.Fetch(shortEntries(short))
 		if priced then text = text .. " |cff9d9d9d- about " .. RPF.Profit.Short(cost) .. "|r" end
@@ -415,6 +412,31 @@ local function drawShopping(r, anchor)
 	shopRow:Show()
 	return shopRow
 end
+
+-- The line names what's missing and what buying it costs.
+shopRow:EnableMouse(true)
+shopRow:SetScript("OnEnter", function (self)
+	GameTooltip:SetOwner(self, "ANCHOR_TOP")
+	GameTooltip:SetText(string.format("Short for %d", shopCount))
+	local total, priced = 0, true
+	for _, part in ipairs(shopShort) do
+		local unit, how = RPF.Profit.BuyCost(part.rg.id)
+		local name = part.amount .. " x " .. (M.ReagentName(part.rg) or ("Item #" .. part.rg.id))
+		if unit then
+			total = total + unit * part.amount
+			GameTooltip:AddDoubleLine(name, RPF.Profit.Short(math.floor(unit * part.amount))
+				.. " |cff9d9d9d(" .. RPF.Profit.HowBuy(how) .. ")|r", 1, 1, 1, 1, 1, 1)
+		else
+			priced = false
+			GameTooltip:AddDoubleLine(name, "|cffff4040no price|r", 1, 1, 1, 1, 1, 1)
+		end
+	end
+	if #shopShort > 1 then
+		GameTooltip:AddDoubleLine("Total", priced and RPF.Profit.Short(math.floor(total)) or "?", 1, 0.82, 0, 1, 1, 1)
+	end
+	GameTooltip:Show()
+end)
+shopRow:SetScript("OnLeave", function () GameTooltip:Hide() end)
 
 shopButton:SetScript("OnEnter", function (self)
 	GameTooltip:SetOwner(self, "ANCHOR_TOP")
@@ -536,7 +558,7 @@ local function drawPrices(r, anchor)
 		if n > 1 and a.profit > 0 then text = text .. string.format("  |cff9d9d9d- %s for the %d you can make|r", P.Signed(a.profit * n), n) end
 		priceLines[3].text:SetText(text)
 		priceLines[3].tip = function (tip)
-			tip:SetText("Profit per craft")
+			tip:SetText("How the profit adds up")
 			P.AddProfitLines(tip, r, a, gatherableBy)
 		end
 		priceLines[3]:Show()
