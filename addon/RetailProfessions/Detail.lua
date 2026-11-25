@@ -849,7 +849,7 @@ local function recipeItemMarket(recipeItem)
 	if not p then return "" end
 	if p.soulbound then return " " .. DIM .. "(binds when picked up)|r" end
 	if p.lowest > 0 then
-		return string.format(" %s- on the auction house from|r %s", DIM, P.Short(p.lowest))
+		return string.format(" %s- on the auction house from|r %s", DIM, P.Coins(p.lowest))
 	end
 	return ""
 end

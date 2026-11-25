@@ -738,7 +738,7 @@ local function todoFor(add, known)
 			if best.have > 0 then
 				sub = sub .. string.format(", you can make %d", best.have)
 			elseif best.cost then
-				sub = sub .. ", materials " .. P.Short(best.cost)
+				sub = sub .. ", materials " .. P.Coins(best.cost)
 			else
 				sub = sub .. ", get the materials"
 			end

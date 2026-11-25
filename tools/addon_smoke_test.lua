@@ -683,6 +683,14 @@ end
 local function buttonWithText(text)
 	return find(function (f) return f.__kind == "Button" and f.__text == text end)
 end
+-- Money as text: coin icons back to g/s/c, colours dropped.
+local function money(text)
+	text = tostring(text or ""):gsub("|T[^|]-UI%-(%a+)Icon[^|]*|t", function (coin)
+		return coin == "Gold" and "g" or coin == "Silver" and "s" or "c"
+	end)
+	return (text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
+end
+
 local function textShown(pattern)
 	return find(function (f) return f.__kind == "FontString" and f.__text:find(pattern) and f:IsVisible() end)
 end
@@ -1443,11 +1451,11 @@ step("craft for profit: ranked by auction prices", function ()
 	-- they count at what selling them brings (10 -5% = 9 each) = 18, less 1 Resourcefulness: +54c.
 	-- The bags make 2.
 	assert(rows[1].header == "Craft now" and rows[2].recipe.spell == 2963, "craft-now group: " .. tostring(rows[1].header))
-	assert(rows[2].right:find("+54c", 1, true), "bolt profit: " .. tostring(rows[2].right))
+	assert(money(rows[2].right) == "54c", "bolt profit: " .. money(rows[2].right))
 	-- Vest: 300 -5% = 285, three linen from the bags 27 + coarse thread from a vendor 10 = 37, less 2
 	-- Resourcefulness = 35; no thread in the bags.
 	assert(rows[3].header == "Buy materials and craft" and rows[4].recipe.spell == 2385, "buy group: " .. tostring(rows[3].header))
-	assert(rows[4].right:find("+2s 50c", 1, true), "vest profit: " .. tostring(rows[4].right))
+	assert(money(rows[4].right) == "2s 50c", "vest profit: " .. money(rows[4].right))
 	RPF.Select(M.bySpell[2385])
 	tick(0.2)
 	assert(textShown("Sells for"), "price block missing")
@@ -1631,7 +1639,7 @@ step("home: the Training and Profit tabs, the professions and the most profitabl
 	local row2 = RPF.Home.rows.crafts[2]
 	-- Vest +2s 57c a craft (the thread is in the bags now: worth 2c sold), bolt +54c.
 	assert(row1.entry and row1.entry.recipe.spell == 2385, "first craft: " .. tostring(row1.entry and row1.entry.recipe.name))
-	assert(row1.cells.profit.__text:find("+2s 57c", 1, true), "vest profit: " .. row1.cells.profit.__text)
+	assert(money(row1.cells.profit.__text) == "2s 57c", "vest profit: " .. money(row1.cells.profit.__text))
 	assert(row2.entry and row2.entry.recipe.spell == 2963, "second craft")
 	assert(textShown("Estimated craft options"), "no summary of what the bags make")
 

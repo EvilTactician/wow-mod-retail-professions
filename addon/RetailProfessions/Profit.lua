@@ -56,11 +56,6 @@ function P.Short(copper)
 	return c .. "c"
 end
 
--- "+1g 20s" in green, "-45s 10c" in red.
-function P.Signed(copper)
-	if copper >= 0 then return "|cff40ff40+" .. P.Short(copper) .. "|r" end
-	return "|cffff4040-" .. P.Short(copper) .. "|r"
-end
 
 -- P.Short with coin icons, as the game's own tooltips show money: gold and silver, or silver
 -- and copper.
@@ -74,14 +69,26 @@ function P.Coins(copper)
 	return c .. COPPER
 end
 
--- Coin amounts in a colour: white, green (what comes in) or red (what goes out).
+-- For the narrow profit columns: from 100 gold on, whole gold only (rounded).
+function P.CoinsCompact(copper)
+	copper = floor(abs(tonumber(copper) or 0))
+	if copper >= 1000000 then return floor((copper + 5000) / 10000) .. GOLD end
+	return P.Coins(copper)
+end
+
+-- Coin amounts by colour, not sign: green what comes in, red what goes out (a cost, the cut).
+-- Only a loss gets a "-", so it can't be read as a cost.
 local GREEN, RED = "|cff40ff40", "|cffff4040"
-function P.CoinsIn(copper) return GREEN .. "+" .. P.Coins(copper) .. "|r" end
-function P.CoinsOut(copper) return RED .. "-" .. P.Coins(copper) .. "|r" end
--- A cost, in red without a sign: what materials come to.
+function P.CoinsIn(copper) return GREEN .. P.Coins(copper) .. "|r" end
 function P.CoinsCost(copper) return RED .. P.Coins(copper) .. "|r" end
 function P.CoinsSigned(copper)
-	return copper >= 0 and P.CoinsIn(copper) or P.CoinsOut(copper)
+	return copper >= 0 and P.CoinsIn(copper) or RED .. "-" .. P.Coins(copper) .. "|r"
+end
+
+-- Profit in a list column: green, or red with a "-" for a loss.
+function P.Signed(copper)
+	if copper >= 0 then return GREEN .. P.CoinsCompact(copper) .. "|r" end
+	return RED .. "-" .. P.CoinsCompact(copper) .. "|r"
 end
 
 -----------------------------------------
@@ -599,7 +606,7 @@ function P.SellNotes(entry)
 	if not p or p.locked then return notes end
 	local _, how = P.SellValue(entry)
 	if p.vendor > 0 then
-		table.insert(notes, string.format("A vendor sells this for %s, so nobody pays more for it, the AH bot included.", P.Short(p.vendor)))
+		table.insert(notes, string.format("A vendor sells this for %s, so nobody pays more for it, the AH bot included.", P.Coins(p.vendor)))
 	end
 	if p.referenceBuyer then
 		if how == "bot" then
@@ -626,7 +633,7 @@ function P.AddProfitLines(tip, r, a, gatherable)
 		a.made % 1 == 0 and tostring(a.made) or string.format("%.1f", a.made)) or ""), 1, 0.82, 0, W, W, W)
 	if a.grossUnit and a.valueHow ~= "vendor" then
 		row("  " .. HOW_SELL[a.valueHow], P.CoinsIn(floor(a.grossUnit * a.made)), W, W, W, W, W, W)
-		row("  " .. P.CutText() .. "% auction cut", P.CoinsOut(floor((a.grossUnit - a.unitValue) * a.made)), W, W, W, W, W, W)
+		row("  " .. P.CutText() .. "% auction cut", P.CoinsCost(floor((a.grossUnit - a.unitValue) * a.made)), W, W, W, W, W, W)
 	else
 		row("  " .. (HOW_SELL[a.valueHow] or ""), "", W, W, W)
 	end
@@ -687,13 +694,13 @@ function P.AddTooltipLines(tip, r)
 	local a = P.state == "ok" and P.Of(r)
 	if not a then return end
 	tip:AddLine(" ")
-	tip:AddDoubleLine("Sells for", P.Short(a.unitValue) .. " |cff9d9d9d(" .. P.HowSell(a.valueHow) .. ")|r", 1, 0.82, 0, 1, 1, 1)
-	tip:AddDoubleLine("Materials", a.costKnown and P.Short(a.cost) or "?", 1, 0.82, 0, 1, 1, 1)
+	tip:AddDoubleLine("Sells for", P.Coins(a.unitValue) .. " |cff9d9d9d(" .. P.HowSell(a.valueHow) .. ")|r", 1, 0.82, 0, 1, 1, 1)
+	tip:AddDoubleLine("Materials", a.costKnown and P.CoinsCost(a.cost) or "?", 1, 0.82, 0, 1, 1, 1)
 	if a.costKnown then
-		tip:AddDoubleLine("Profit per craft", P.Signed(a.profit), 1, 0.82, 0, 1, 1, 1)
+		tip:AddDoubleLine("Profit per craft", P.CoinsSigned(a.profit), 1, 0.82, 0, 1, 1, 1)
 		local n = r.learned and canMake(r) or 0
 		if n > 1 and a.profit > 0 then
-			tip:AddDoubleLine(string.format("Craft all %d", n), P.Signed(a.profit * n), 1, 0.82, 0, 1, 1, 1)
+			tip:AddDoubleLine(string.format("Craft all %d", n), P.CoinsSigned(a.profit * n), 1, 0.82, 0, 1, 1, 1)
 		end
 	end
 	local market = P.MarketText(r.item)
