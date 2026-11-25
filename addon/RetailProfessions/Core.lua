@@ -854,6 +854,12 @@ function RPF.WhereToGet(item, handler)
 	whereLookup("i" .. item .. ":" .. (GetRealZoneText() or ""), "I", { tostring(item) }, handler)
 end
 
+-- What WhereToGet already knows about an item here, without asking: its rows, or nil.
+function RPF.CachedWhereToGet(item)
+	local cached = whereCache["i" .. item .. ":" .. (GetRealZoneText() or "")]
+	return cached and cached.rows or nil
+end
+
 -- Sources change with progression (a raid kill opens vendors and closes others): ask again
 -- after each loading screen, which leaving the raid brings.
 function RPF.ForgetWhere()

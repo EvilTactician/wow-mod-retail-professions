@@ -40,9 +40,10 @@ local bisCraft=P.Of({item=10000005,reagents={{id=10000002,n=1000}},madeMin=1,mad
 assert(bisCraft.costKnown and bisCraft.profit==1564900, 'craft profit uses executable offer, not retail resale')
 assert(P.BuyCost(10000005) == 2120000, 'buying references remain full seller price')
 assert(P.SellValue(10000006) == 12, 'unavailable targeted buyer must not fall back to catalog profit')
-assert(P.MarketText(10000005):find('purchase timing follows buyer cycles',1,true))
-assert(P.MarketText(10000006):find('Profit uses vendor value',1,true), 'missing-offer source text')
-assert(P.SellValue(10000008)==200 and P.MarketText(10000008):find('Profit uses vendor value',1,true), 'higher-vendor source text')
+local function notes(e) return table.concat(P.SellNotes(e), ' ') end
+assert(notes(10000005):find('when it next looks',1,true))
+assert(notes(10000006):find('offers less than a vendor pays',1,true), 'missing-offer source text')
+assert(P.SellValue(10000008)==200 and notes(10000008):find('offers less than a vendor pays',1,true), 'higher-vendor source text')
 local cut = P.cut
 P.cut = 5
 assert(P.SellValue(10000007)==96, 'settlement subtracts truncated fee: 101 - floor(5.05) = 96')
@@ -58,7 +59,7 @@ assert(P.BuyCost(10000003)==nil, 'locked reference cannot become a source')
 assert(P.SellValue(10000004)==25, 'soulbound must remain vendor-only')
 local a=P.Of({item=10000001,reagents={{id=10000002,n=2}},madeMin=2,madeMax=2})
 assert(a.costKnown and a.cost==400 and a.profit==1450, 'multi-output craft economics')
-assert(P.MarketText(10000001):find('availability and sale not guaranteed',1,true))
+assert(notes(10000001):find("a sale isn't guaranteed",1,true))
 assert(P.Fetching(), 'remaining batches must remain pending')
 advance(.13)
 assert(#sent==2, 'one next batch after completion')

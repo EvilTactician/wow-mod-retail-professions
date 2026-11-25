@@ -461,17 +461,26 @@ local function hidePrices()
 	for _, line in ipairs(priceLines) do line:Hide() end
 end
 
+-- How you could gather a reagent yourself ("mine or prospect"), from its sources once the
+-- reagent badges have looked them up; nil when you can't (set further down).
+local gatherableBy
+
 -- Each reagent: amount, price and where that price comes from.
 local function materialsTip(a)
 	return function (tip)
 		tip:SetText("Materials per craft")
 		for _, part in ipairs(a.parts) do
 			local name = M.ReagentName(part.rg) or ("Item #" .. tostring(part.rg.id or "?"))
-			local right = part.unit and (RPF.Profit.Short(part.unit * part.rg.n) .. " |cff9d9d9d(" .. RPF.Profit.HowBuy(part.how) .. ")|r")
+			local right = part.known and (RPF.Profit.Short(math.floor(part.cost)) .. " |cff9d9d9d(" .. RPF.Profit.HowBuy(part.how) .. ")|r")
 				or "|cffff4040no price|r"
 			tip:AddDoubleLine(part.rg.n .. " x " .. name, right, 1, 1, 1, 1, 1, 1)
 		end
-		tip:AddLine("Materials you have count at their price too: crafting has to beat selling them.", 0.6, 0.6, 0.6, true)
+		if a.saving > 0 then
+			tip:AddDoubleLine(string.format("Resourcefulness %d%%", math.floor((a.resourceful or 0) + 0.5)),
+				"-" .. RPF.Profit.Short(a.saving), 1, 1, 1, 0.25, 1, 0.25)
+		end
+		tip:AddLine("Materials you have count at what selling them would bring: crafting has to beat that. "
+			.. "Ones you can craft yourself count at the cheaper of buying and crafting them.", 0.6, 0.6, 0.6, true)
 	end
 end
 
@@ -498,8 +507,6 @@ local function drawPrices(r, anchor)
 
 	local sells = string.format("|cffffd200Sells for|r  %s each |cff9d9d9d(%s)|r", P.Short(a.unitValue), P.HowSell(a.valueHow))
 	if a.made ~= 1 then sells = sells .. string.format("  x%s", a.made % 1 == 0 and tostring(a.made) or string.format("%.1f", a.made)) end
-	local market = P.MarketText(r.item)
-	if market ~= "" then sells = sells .. "  |cff9d9d9d- " .. market .. "|r" end
 	priceLines[1].text:SetText(sells)
 	priceLines[1].tip = function (tip)
 		local p = P.Get(r.item)
@@ -511,7 +518,10 @@ local function drawPrices(r, anchor)
 			tip:AddDoubleLine(string.format("Sold lately (%d days)", P.days), P.Short(math.floor(p.soldCopper / p.soldUnits)) .. " avg", 1, 1, 1, 1, 1, 1)
 		end
 		if p and p.sell > 0 then tip:AddDoubleLine("A vendor pays", P.Short(p.sell), 1, 1, 1, 1, 1, 1) end
-		tip:AddLine(string.format("Counted after the %d%% house cut, except the vendor price.", P.cut), 0.6, 0.6, 0.6, true)
+		local market = P.MarketText(r.item)
+		if market ~= "" then tip:AddLine(market, 1, 1, 1, true) end
+		tip:AddLine(string.format("Counted after the %s%% house cut, except the vendor price.", P.CutText()), 0.6, 0.6, 0.6, true)
+		for _, note in ipairs(P.SellNotes(r.item)) do tip:AddLine(note, 0.6, 0.6, 0.6, true) end
 	end
 	priceLines[1]:Show()
 
@@ -525,6 +535,10 @@ local function drawPrices(r, anchor)
 		local n = r.learned and P.CanMake(r) or 0
 		if n > 1 and a.profit > 0 then text = text .. string.format("  |cff9d9d9d- %s for the %d you can make|r", P.Signed(a.profit * n), n) end
 		priceLines[3].text:SetText(text)
+		priceLines[3].tip = function (tip)
+			tip:SetText("Profit per craft")
+			P.AddProfitLines(tip, r, a, gatherableBy)
+		end
 		priceLines[3]:Show()
 		return priceLines[3]
 	end
@@ -969,6 +983,23 @@ local function gatherVerb(src)
 		return skill == 182 and "pick" or skill == 186 and "mine" or "fish"
 	end
 	return ({ F = "fish", K = "skin", E = "disenchant", M = "mill", J = "prospect" })[src.kind]
+end
+
+-- Only from sources already looked up (the badges ask for the selected recipe's reagents), so
+-- a tooltip never sends a request.
+gatherableBy = function (item)
+	local rows = RPF.CachedWhereToGet and RPF.CachedWhereToGet(item)
+	if not rows then return nil end
+	local verbs, seen = {}, {}
+	for _, src in ipairs(rows) do
+		local skill = GATHER[src.kind] and gatherSkill(src)
+		local verb = skill and knows(skill) and gatherVerb(src)
+		if verb and not seen[verb] then
+			seen[verb] = true
+			table.insert(verbs, verb)
+		end
+	end
+	return #verbs > 0 and table.concat(verbs, " or ") or nil
 end
 
 -- A drop worth sending someone after when a profession also gives the reagent: 15%.

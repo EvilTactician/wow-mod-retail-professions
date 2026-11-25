@@ -406,8 +406,9 @@ profitButton:SetScript("OnEnter", function (self)
 	GameTooltip:AddLine("Ranks the recipes you know by what the item sells for on the auction house, after the house cut, "
 		.. "minus what the materials cost: Craft now (you have the materials, bags and reagent bank), Buy materials "
 		.. "and craft, and the rest.", 1, 1, 1, true)
-	GameTooltip:AddLine("Materials are priced at the cheaper of a vendor and the lowest buyout, even the ones you have: "
-		.. "crafting has to beat selling them as they are.", 0.7, 0.7, 0.7, true)
+	GameTooltip:AddLine("Materials you have count at what selling them would bring: crafting has to beat selling them "
+		.. "as they are. The rest count at the cheaper of buying them and crafting them yourself. Multicraft and "
+		.. "Resourcefulness are counted in.", 0.7, 0.7, 0.7, true)
 	if profitView() then
 		local age = P.Age(P.ProfessionEntries())
 		if P.Fetching() then

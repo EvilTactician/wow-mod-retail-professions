@@ -1,10 +1,10 @@
-# Retail Professions 1.24.6
+# Retail Professions 1.24.7
 
 <div align="center">
 
 ![Interface Version](https://img.shields.io/badge/Interface-30300-blue)
 ![WoW Version](https://img.shields.io/badge/WoW-3.3.5a-orange)
-[![Version](https://img.shields.io/badge/Version-1.24.6-green)](https://github.com/EvilTactician/wow-mod-retail-professions)
+[![Version](https://img.shields.io/badge/Version-1.24.7-green)](https://github.com/EvilTactician/wow-mod-retail-professions)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 </div>
@@ -216,17 +216,23 @@ crafting speed**, earned by skill.
   row for the sale price, the materials, the profit and how much you make crafting everything
   you can.
 - The recipe pane gets an **Auction house** block: what it sells for and where that price comes
-  from, how many are listed and how many sold in the last 14 days, the materials (hover for each
-  reagent's price and source) and the profit. It shows for recipes you haven't learned too, so
-  you can see whether one is worth learning.
+  from (hover for how many are listed and sold in the last 14 days), the materials (hover for
+  each reagent's price and source) and the profit. Hover the profit for the whole sum: the sale,
+  the house cut, Multicraft, each reagent, Resourcefulness and, when a missing reagent is one you
+  can gather yourself, how much more the craft makes if you do. It shows for recipes you haven't
+  learned too, so you can see whether one is worth learning.
 - How it prices:
   - **Selling**: the lowest buyout, or with nothing listed, what it sold for lately. When the AH
     bot buyer pays more (it buys every time it looks), that instead. A vendor's price when that's
     more still. Items that bind on pickup are worth their vendor price only. Your own auctions
     aren't counted.
-  - **Materials**: the cheaper of a vendor and the lowest buyout. Materials you already have
-    count at that price too, since crafting has to beat selling them as they are. A material
-    nothing sells counts at its vendor price if you have enough of it.
+  - **Materials you have** (bags, and the reagent bank when it's counted) count at what selling
+    them would bring, since crafting has to beat selling them as they are.
+  - **Materials you don't have**: the cheaper of buying them (a vendor, the AH bot's price or the
+    lowest buyout) and, for one you can craft in this profession, crafting it from its own
+    reagents, priced the same way (one level down).
+  - **Multicraft** adds its extra batches to the sale, **Resourcefulness** takes its refunds off
+    the materials.
 - Prices are the auction house of your own faction (the neutral one with two-side trading), from
   anywhere: no need to stand at an auctioneer. They stay good for 3 minutes; Shift-click the coin
   to ask again. Enchants aren't listed, since they make no item.
@@ -482,7 +488,8 @@ Each request is bounded to the addon-message size limit and only one batch is in
 queued batches start after completion, avoiding the old startup request burst. Prices
 are reused for three minutes across recipe details, Training and Most profitable crafts.
 
-Material cost uses the cheaper vendor or bot reference. Estimated output proceeds deduct
+Materials you don't have cost the cheaper vendor or bot reference (or crafting them, one
+level down); ones you have count at their estimated proceeds. Estimated output proceeds deduct
 the effective house cut; vendor sales and the existing modeled buyer offer remain alternatives.
 Labels distinguish bot reference estimates from live lowest-buyout prices. References do
 not establish stock availability or guarantee a player sale; craft options may share the
