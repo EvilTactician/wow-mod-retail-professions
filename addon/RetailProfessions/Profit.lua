@@ -597,6 +597,9 @@ function P.AddProfitLines(tip, r, a, gatherable)
 	local W, G = 1, 0.6
 	-- A gap after the left text, so it never runs into the amount.
 	local function row(left, right, ...) tip:AddDoubleLine(left .. "      ", right, ...) end
+	-- A blank line before each heading, so the sections stand apart.
+	local function gap() tip:AddLine(" ") end
+	gap()
 	row("Sells for", P.Short(floor(a.unitValue * a.made)) .. (a.made ~= 1 and string.format(" |cff9d9d9d(x%s)|r",
 		a.made % 1 == 0 and tostring(a.made) or string.format("%.1f", a.made)) or ""), 1, 0.82, 0, W, W, W)
 	if a.grossUnit and a.valueHow ~= "vendor" then
@@ -609,6 +612,7 @@ function P.AddProfitLines(tip, r, a, gatherable)
 		row(string.format("  Multicraft %d%%", floor(a.multicraft + 0.5)),
 			"+" .. P.Short(a.value - floor(a.unitValue * a.made)), W, W, W, 0.25, 1, 0.25)
 	end
+	gap()
 	row("Materials", a.costKnown and P.Short(a.cost) or "?", 1, 0.82, 0, W, W, W)
 	for _, part in ipairs(a.parts) do
 		local name = M.ReagentName(part.rg) or ("Item #" .. tostring(part.rg.id or "?"))
@@ -630,6 +634,7 @@ function P.AddProfitLines(tip, r, a, gatherable)
 			W, W, W, 0.25, 1, 0.25)
 	end
 	if a.costKnown then
+		gap()
 		row("Profit per craft", P.Signed(a.profit), 1, 0.82, 0, W, W, W)
 	end
 	-- Missing reagents you could gather yourself instead of buying.
@@ -644,10 +649,13 @@ function P.AddProfitLines(tip, r, a, gatherable)
 		end
 	end
 	if #lines > 0 then
+		gap()
 		tip:AddLine("If you gather it yourself", 1, 0.82, 0)
 		for _, line in ipairs(lines) do row(line[1], "+" .. P.Short(line[2]), W, W, W, 0.25, 1, 0.25) end
+		gap()
 		row("Profit if gathered", P.Signed(a.profit + gain), 1, 0.82, 0, W, W, W)
 	end
+	gap()
 	for _, note in ipairs(P.SellNotes(r.item)) do tip:AddLine(note, G, G, G, true) end
 	tip:AddLine("Materials you have count at what selling them would bring: crafting has to beat that.", G, G, G, true)
 end

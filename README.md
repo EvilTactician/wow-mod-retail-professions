@@ -1,10 +1,10 @@
-# Retail Professions 1.25.1
+# Retail Professions 1.25.2
 
 <div align="center">
 
 ![Interface Version](https://img.shields.io/badge/Interface-30300-blue)
 ![WoW Version](https://img.shields.io/badge/WoW-3.3.5a-orange)
-[![Version](https://img.shields.io/badge/Version-1.25.1-green)](https://github.com/EvilTactician/wow-mod-retail-professions)
+[![Version](https://img.shields.io/badge/Version-1.25.2-green)](https://github.com/EvilTactician/wow-mod-retail-professions)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 </div>
