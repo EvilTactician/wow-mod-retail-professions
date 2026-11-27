@@ -285,24 +285,31 @@ local function makerOf(id)
 end
 P.MakerOf = makerOf
 
+-- How far down a chain of reagents nobody sells goes (Runed Truesilver Rod needs a Runed
+-- Golden Rod, which needs a Runed Silver Rod...).
+local MAX_CHAIN = 6
+
 -- The items a recipe involves: what it makes, its reagents and, for reagents you can make
--- yourself, theirs.
+-- yourself, theirs (down a chain too, see MAX_CHAIN).
 function P.EntriesOf(r, into, seen)
 	into, seen = into or {}, seen or {}
 	local function add(id)
 		if id and id > 0 and not seen[id] then
 			seen[id] = true
 			table.insert(into, id)
+			return true
+		end
+	end
+	local function walk(recipe, depth)
+		for _, rg in ipairs(recipe.reagents) do
+			if add(rg.id) and depth < MAX_CHAIN then
+				local sub = makerOf(rg.id)
+				if sub and sub ~= recipe then walk(sub, depth + 1) end
+			end
 		end
 	end
 	add(r.item)
-	for _, rg in ipairs(r.reagents) do
-		add(rg.id)
-		local sub = makerOf(rg.id)
-		if sub and sub ~= r then
-			for _, srg in ipairs(sub.reagents) do add(srg.id) end
-		end
-	end
+	walk(r, 0)
 	return into
 end
 
@@ -414,9 +421,10 @@ end
 
 local priceReagent
 
--- What one unit of an item costs to make with a learned recipe (one level down only), or nil.
-local function makeUnit(id, n, stock, depth)
-	local sub = depth == 0 and makerOf(id)
+-- What one unit of an item costs to make with a learned recipe, or nil: one level down, or
+-- further for an item nobody sells (chain).
+local function makeUnit(id, n, stock, depth, chain)
+	local sub = (depth == 0 or chain and depth < MAX_CHAIN) and makerOf(id)
 	if not sub then return nil end
 	local yield = ((sub.madeMin or 1) + (sub.madeMax or sub.madeMin or 1)) / 2
 	local outFactor, costFactor = perkFactors(sub)
@@ -450,7 +458,7 @@ priceReagent = function (id, n, stock, depth)
 	end
 	if part.missing > 0 then
 		local buy, how = P.BuyCost(id)
-		local make, trial, sub = makeUnit(id, part.missing, stock, depth)
+		local make, trial, sub = makeUnit(id, part.missing, stock, depth, not buy)
 		if make and (not buy or make < buy) then
 			merge(stock, trial)
 			part.buyUnit, part.buyHow, part.made = make, "made", sub

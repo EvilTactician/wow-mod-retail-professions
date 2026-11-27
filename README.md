@@ -1,10 +1,10 @@
-# Retail Professions 1.25.4
+# Retail Professions 1.25.5
 
 <div align="center">
   
 ![Interface Version](https://img.shields.io/badge/Interface-30300-blue)
 ![WoW Version](https://img.shields.io/badge/WoW-3.3.5a-orange)
-[![Version](https://img.shields.io/badge/Version-1.25.4-green)](https://github.com/EvilTactician/wow-mod-retail-professions)
+[![Version](https://img.shields.io/badge/Version-1.25.5-green)](https://github.com/EvilTactician/wow-mod-retail-professions)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 </div>
@@ -244,7 +244,8 @@ crafting speed**, earned by skill.
     them would bring, since crafting has to beat selling them as they are.
   - **Materials you don't have**: the cheaper of buying them (a vendor, the AH bot's price or the
     lowest buyout) and, for one you can craft in this profession, crafting it from its own
-    reagents, priced the same way (one level down).
+    reagents, priced the same way (one level down, or further for a reagent nobody sells, like
+    the Runed Silver Rod a Runed Golden Rod needs).
   - **Multicraft** adds its extra batches to the sale, **Resourcefulness** takes its refunds off
     the materials.
 - Prices are the auction house of your own faction (the neutral one with two-side trading), from
